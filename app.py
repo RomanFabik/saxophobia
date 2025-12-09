@@ -19,13 +19,13 @@ from typing import List, Dict, Optional, Tuple
 # Konštanty & defaulty
 # -----------------------------
 DEFAULT_LECTORS = [
-    "Ryo Noda",
-    "Philippe Portejoie",
-    "Pieter Pellens",
-    "Álvaro León",
-    "Lev Pupis",
-    "Erzsébet Seleljo",
-    "Pavel Škrna",
+    "Rall",
+    "Zoelen",
+    "Trompenaars",
+    "Fančovič",
+    "Padilla",
+    "Brutti",
+    "Portejoie",
 ]
 
 
@@ -710,17 +710,38 @@ def page_application():
 
 def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
     cur = conn.cursor()
-    cols = [
+
+    # Stĺpce, ktoré chceme zapisovať
+    desired_cols = [
         "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
         "price_accommodation","price_breakfasts","price_citytax","price_course","price_total",
         "room_code",
     ]
+
+    # Zistíme, ktoré stĺpce reálne existujú v DB
+    cur.execute("PRAGMA table_info(registrations)")
+    db_cols = {row[1] for row in cur.fetchall()}
+
+    # Budeme používať len prienik: existuje v DB aj v DataFrame
+    cols = [c for c in desired_cols if c in db_cols and c in df.columns]
+
     for _, r in df.iterrows():
+        reg_id = r.get("id")
+        # ak chýba ID (napr. nový prázdny riadok), preskočíme
+        if reg_id is None or (pd.isna(reg_id)):
+            continue
+
         placeholders = ", ".join([f"{c}=?" for c in cols])
         values = [r.get(c) for c in cols]
-        cur.execute(f"UPDATE registrations SET {placeholders} WHERE id=?", values + [int(r["id"])])
+
+        cur.execute(
+            f"UPDATE registrations SET {placeholders} WHERE id=?",
+            values + [int(reg_id)],
+        )
+
     conn.commit()
+
 
 
 def compute_room_occupancy(reg_df: pd.DataFrame) -> Dict[str, int]:
