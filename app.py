@@ -1188,6 +1188,28 @@ def page_organizer():
     # Kapacitné plnenie – prehľad (používa plné df)
     if not df.empty:
         capacity_overview(df)
+        # --- Hromadné vymazanie registrácií (nový ročník) ---
+    with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
+        st.warning(
+            "Toto vymaže všetky prihlášky zo systému vrátane ich priradení "
+            "k lekciám. Použi len pri začiatku nového ročníka."
+        )
+
+        confirm = st.checkbox(
+            "Áno, chcem vymazať všetky registrácie a súvisiace priradenia.",
+            value=False,
+        )
+
+        if confirm and st.button("Vymazať všetky registrácie"):
+            cur = conn.cursor()
+            # Najprv vymažeme priradenia lekcií
+            cur.execute("DELETE FROM assignments")
+            # Potom všetky registrácie
+            cur.execute("DELETE FROM registrations")
+            conn.commit()
+
+            st.success("Všetky registrácie a priradenia boli vymazané.")
+            st.experimental_rerun()
 
 
     # --- 📧 EMAILY ORGANIZÁTORA ---
