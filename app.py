@@ -27,6 +27,41 @@ from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Optional, Tuple
 
 # -----------------------------
+# Jazykové texty
+# -----------------------------
+TEXTS = {
+    "SK": {
+        "application_header": "Prihláška – Saxophobia",
+        "application_fill": "Vyplňte prosím údaje. * (povinné)",
+        "name": "Meno a priezvisko *",
+        "email": "E-mail *",
+        "phone": "Telefón",
+        "age": "Vek",
+        "course": "Kurz",
+        "instrument": "Nástroj",
+        "school": "Škola",
+        "submit": "Odoslať prihlášku",
+        "success": "Ďakujeme, prihláška bola odoslaná.",
+    },
+
+    "EN": {
+        "application_header": "Application – Saxophobia",
+        "application_fill": "Please fill in the required information. * (required)",
+        "name": "Full name *",
+        "email": "E-mail *",
+        "phone": "Phone",
+        "age": "Age",
+        "course": "Course",
+        "instrument": "Instrument",
+        "school": "School",
+        "submit": "Submit application",
+        "success": "Thank you, your application has been sent.",
+    }
+}
+
+
+
+# -----------------------------
 # Konštanty & defaulty
 # -----------------------------
 DEFAULT_LECTORS = [
@@ -639,57 +674,113 @@ def persist_prices(conn: sqlite3.Connection, priced_df: pd.DataFrame):
 # -----------------------------
 
 def page_application():
-    st.header("Prihláška – Saxophobia")
-    st.write("Vyplňte prosím údaje. * (povinné)")
+    lang = st.session_state.get("lang", "SK")
+    txt = TEXTS.get(lang, TEXTS["SK"])
+
+    st.header(txt["application_header"])
+    st.write(txt["application_fill"])
 
     with st.form("application_form"):
-        name = st.text_input("Meno a priezvisko *")
-        email = st.text_input("E-mail *")
-        phone = st.text_input("Telefón")
-        age = st.number_input("Vek", min_value=5, max_value=100, value=18)
-        course = st.selectbox("Kurz", options=COURSES)
-        # MULTIVÝBER nástroja
-        instrument = st.multiselect("Nástroj", options=INSTRUMENTS)
-        school = st.text_input("Škola (napr. ZUŠ, konzervatórium)")
-        year_of_study = st.text_input("Ročník štúdia")
+        # Základné údaje
+        name = st.text_input(txt["name"])
+        email = st.text_input(txt["email"])
+        phone = st.text_input(txt["phone"])
+        age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
+        course = st.selectbox(txt["course"], options=COURSES)
+        instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
 
-        people_count = st.number_input("Počet ľudí v skupine (1 = jednotlivec)", 1, 10, 1)
-        ensemble_type = st.selectbox("Typ (jednotlivec / duo / trio / kvarteto ...)", ENSEMBLE_TYPES)
-        member_names = st.text_input("Názov hudobného telesa")
+        school_label = txt["school"] + (
+            " (napr. ZUŠ, konzervatórium)" if lang == "SK"
+            else " (e.g. music school, conservatory)"
+        )
+        school = st.text_input(school_label)
+
+        year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
+        year_of_study = st.text_input(year_label)
+
+        # Skupina / ensemble
+        people_label = (
+            "Počet ľudí v skupine (1 = jednotlivec)"
+            if lang == "SK" else
+            "Number of people in the group (1 = solo)"
+        )
+        people_count = st.number_input(people_label, 1, 10, 1)
+
+        ensemble_label = (
+            "Typ (jednotlivec / duo / trio / kvarteto ...)"
+            if lang == "SK" else
+            "Type (solo / duo / trio / quartet ...)"
+        )
+        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
+
+        members_label = (
+            "Názov hudobného telesa"
+            if lang == "SK" else
+            "Name of ensemble / group"
+        )
+        member_names = st.text_input(members_label)
         lesson_count = 0  # určí organizátor
 
-        # načítaj lektorov z DB
+        # Lektori
         conn = get_conn()
         lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
         lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
-        preferred_lectors = st.multiselect("Preferovaní lektori (v poradí priority)", options=lectors, default=[])
 
-        st.subheader("Ubytovanie a strava")
+        pref_label = (
+            "Preferovaní lektori (v poradí priority)"
+            if lang == "SK" else
+            "Preferred teachers (in order of priority)"
+        )
+        preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
 
-        # Checkbox je len informačný (neuzamyká polia)
-        wants_accommodation = st.checkbox("Potrebujem ubytovanie", value=False)
+        # Ubytovanie a strava
+        st.subheader("Ubytovanie a strava" if lang == "SK" else "Accommodation and meals")
 
-        # Dátumy a typ izby sú vždy editovateľné
-        _default_arrival   = EVENT_START
+        wants_label = "Potrebujem ubytovanie" if lang == "SK" else "I need accommodation"
+        wants_accommodation = st.checkbox(wants_label, value=False)
+
+        _default_arrival = EVENT_START
         _default_departure = EVENT_END
-        arrival_date = st.date_input("Príchod", value=_default_arrival)
-        departure_date = st.date_input("Odchod", value=_default_departure)
-        room_type = st.selectbox("Typ izby", ROOM_TYPES)
 
-        # Predvyplnenie
+        arr_label = "Príchod" if lang == "SK" else "Arrival"
+        dep_label = "Odchod" if lang == "SK" else "Departure"
+        arrival_date = st.date_input(arr_label, value=_default_arrival)
+        departure_date = st.date_input(dep_label, value=_default_departure)
+
+        room_label = "Typ izby" if lang == "SK" else "Room type"
+        room_type = st.selectbox(room_label, ROOM_TYPES)
+
         _days_inclusive = (_default_departure - _default_arrival).days + 1
-        breakfasts = st.number_input("Počet raňajok", 0, 10, _days_inclusive)
-        lunches = st.number_input("Počet obedov", 0, 15, _days_inclusive)
 
-        notes = st.text_area("Poznámka k strave (alergie, intolerancie a pod.)")
+        bfast_label = "Počet raňajok" if lang == "SK" else "Number of breakfasts"
+        breakfasts = st.number_input(bfast_label, 0, 10, _days_inclusive)
 
-        submitted = st.form_submit_button("Odoslať prihlášku")
+        lunch_label = "Počet obedov" if lang == "SK" else "Number of lunches"
+        lunches = st.number_input(lunch_label, 0, 15, _days_inclusive)
+
+        notes_label = (
+            "Poznámka k strave (alergie, intolerancie a pod.)"
+            if lang == "SK" else
+            "Notes on diet (allergies, intolerances, etc.)"
+        )
+        notes = st.text_area(notes_label)
+
+        submit_label = txt.get(
+            "submit",
+            "Odoslať prihlášku" if lang == "SK" else "Submit application",
+        )
+        submitted = st.form_submit_button(submit_label)
 
         if submitted:
             if not name or not email:
-                st.error("Meno a e-mail sú povinné.")
+                err = (
+                    "Meno a e-mail sú povinné."
+                    if lang == "SK" else
+                    "Name and e-mail are required."
+                )
+                st.error(err)
             else:
-                # PREVOD multiselect -> text pre DB
+                # multiselect -> text
                 instrument_str = ", ".join(instrument) if instrument else ""
 
                 cur = conn.cursor()
@@ -710,7 +801,7 @@ def page_application():
                         phone,
                         int(age),
                         course,
-                        instrument_str,  # <- uložíme text, nie list
+                        instrument_str,
                         school,
                         year_of_study,
                         int(people_count),
@@ -729,8 +820,13 @@ def page_application():
                     ),
                 )
                 conn.commit()
-                st.success("Ďakujeme, prihláška bola odoslaná.")
-                st.caption("Kópia údajov bude k dispozícii organizátorom v administrácii.")
+                st.success(txt["success"])
+                st.caption(
+                    "Kópia údajov bude k dispozícii organizátorom v administrácii."
+                    if lang == "SK" else
+                    "A copy of your data will be available to the organisers in the admin interface."
+                )
+
 
 
 # -----------------------------
@@ -1698,6 +1794,10 @@ def main():
     st.sidebar.image("Logo.jpg", use_column_width=True)
     st.sidebar.markdown("### Saxophobia")
 
+    # Prepínač jazyka
+    lang = st.sidebar.radio("Language", ["SK", "EN"], horizontal=True)
+    st.session_state["lang"] = lang
+    
     page = st.sidebar.radio(
         "Navigácia",
         ["Prihláška", "Organizátor", "Admin", "Feedback"],
