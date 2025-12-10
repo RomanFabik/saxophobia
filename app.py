@@ -31,6 +31,24 @@ from typing import List, Dict, Optional, Tuple
 # -----------------------------
 TEXTS = {
     "SK": {
+        ...
+        "nav_application": "Prihláška",
+        "nav_organizer": "Organizátor",
+        "nav_admin": "Admin",
+        "nav_feedback": "Feedback",
+        "nav_label": "Navigácia",
+        "lang_label": "Jazyk",
+    },
+    "EN": {
+        ...
+        "nav_application": "Application",
+        "nav_organizer": "Organizer",
+        "nav_admin": "Admin",
+        "nav_feedback": "Feedback",
+        "nav_label": "Navigation",
+        "lang_label": "Language",
+    },
+    "SK": {
         "application_header": "Prihláška – Saxophobia",
         "application_fill": "Vyplňte prosím údaje. * (povinné)",
         "name": "Meno a priezvisko *",
@@ -58,7 +76,6 @@ TEXTS = {
         "success": "Thank you, your application has been sent.",
     }
 }
-
 
 
 # -----------------------------
@@ -1798,20 +1815,41 @@ def main():
     lang = st.sidebar.radio("Language", ["SK", "EN"], horizontal=True)
     st.session_state["lang"] = lang
     
-    page = st.sidebar.radio(
-        "Navigácia",
-        ["Prihláška", "Organizátor", "Admin", "Feedback"],
-    )
+    lang = st.session_state.get("lang", "SK")
+txt = TEXTS.get(lang, TEXTS["SK"])
+
+st.sidebar.title("Saxophobia")
+
+# Prepínač jazyka
+st.sidebar.markdown(f"**{txt['lang_label']}**")
+st.sidebar.radio(
+    "",
+    ["SK", "EN"],
+    horizontal=True,
+    key="lang",
+)
+
+# Navigácia podľa jazyka
+page = st.sidebar.radio(
+    txt["nav_label"],
+    [
+        txt["nav_application"],
+        txt["nav_organizer"],
+        txt["nav_admin"],
+        txt["nav_feedback"],
+    ],
+)
 
 
-    if page == "Prihláška":
+    if page == txt["nav_application"]:
         page_application()
-    elif page == "Organizátor":
+    elif page == txt["nav_organizer"]:
         page_organizer()
-    elif page == "Admin":
+    elif page == txt["nav_admin"]:
         page_admin()
-    else:  # Feedback
+    elif page == txt["nav_feedback"]:
         page_feedback()
+
 
 if __name__ == "__main__":
     main()
