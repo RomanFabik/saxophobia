@@ -51,6 +51,28 @@ TEXTS = {
         "school": "Škola",
         "submit": "Odoslať prihlášku",
         "success": "Ďakujeme, prihláška bola odoslaná.",
+
+        # --- Feedback formulár ---
+        "feedback_header": "Feedback – Saxophobia",
+        "feedback_intro": "Ďakujeme, že nám pomáhate zlepšovať Saxophobiu.",
+        "feedback_liked": "Čo sa vám na Saxophobii páčilo?",
+        "feedback_improve": "Čo by sme mali zlepšiť?",
+        "feedback_lectors": "Ktorých lektorov by ste privítali nabudúce?",
+        "feedback_workshops": "Workshopy",
+        "feedback_topics": "Aký obsah workshopov by ste chceli nabudúce?",
+        "feedback_other": "Akýkoľvek iný komentár:",
+        "feedback_name_optional": "Vaše meno (nepovinné):",
+        "feedback_submit": "Odoslať feedback",
+        "feedback_success": "Ďakujeme za spätnú väzbu!",
+
+        # --- Feedback admin ---
+        "feedback_admin_tab": "Admin – otázky & export",
+        "feedback_fill_tab": "Vyplniť dotazník",
+        "feedback_year": "Rok",
+        "feedback_questions_title": "Otázky k workshopom",
+        "feedback_add_default_q": "Doplniť predvolené otázky",
+        "feedback_save_questions": "Uložiť otázky",
+        "feedback_export": "Export odpovedí",
     },
 
     "EN": {
@@ -74,6 +96,28 @@ TEXTS = {
         "school": "School",
         "submit": "Submit application",
         "success": "Thank you, your application has been sent.",
+
+        # --- Feedback form ---
+        "feedback_header": "Feedback – Saxophobia",
+        "feedback_intro": "Thank you for helping us improve Saxophobia.",
+        "feedback_liked": "What did you like about Saxophobia?",
+        "feedback_improve": "What should we improve?",
+        "feedback_lectors": "Which lecturers would you welcome next time?",
+        "feedback_workshops": "Workshops",
+        "feedback_topics": "What workshop topics would you like next time?",
+        "feedback_other": "Any other comment:",
+        "feedback_name_optional": "Your name (optional):",
+        "feedback_submit": "Submit feedback",
+        "feedback_success": "Thank you for your feedback!",
+
+        # --- Feedback admin ---
+        "feedback_admin_tab": "Admin – questions & export",
+        "feedback_fill_tab": "Fill out the form",
+        "feedback_year": "Year",
+        "feedback_questions_title": "Workshop questions",
+        "feedback_add_default_q": "Add default questions",
+        "feedback_save_questions": "Save questions",
+        "feedback_export": "Export responses",
     }
 }
 
@@ -218,51 +262,69 @@ def save_feedback_response(conn: sqlite3.Connection, payload: dict):
     conn.commit()
 
 def page_feedback():
-    st.header("Feedback – Saxophobia")
+    # Jazykové texty
+    lang = st.session_state.get("lang", "SK")
+    txt = TEXTS.get(lang, TEXTS["SK"])
+
+    st.header(txt["feedback_header"])
     conn = get_conn()
     ensure_feedback_tables(conn)
 
-    # rok – predvyplnený podľa EVENT_START, ale zmeniteľný (pre minulé/ďalšie ročníky)
-    year = st.number_input("Rok", min_value=2020, max_value=2100, value=FEEDBACK_YEAR_DEFAULT, step=1)
-
-    # seed otázok, ak pre rok ešte žiadne nie sú
+    # Rok dotazníka
+    year = st.number_input(
+        txt["feedback_year"],
+        min_value=2020,
+        max_value=2100,
+        value=FEEDBACK_YEAR_DEFAULT,
+        step=1,
+    )
     seed_feedback_questions_if_empty(conn, year)
 
-    tabs = st.tabs(["Vyplniť dotazník", "Admin – otázky & export"])
+    tab_fill, tab_admin = st.tabs([txt["feedback_fill_tab"], txt["feedback_admin_tab"]])
 
-    # --- Verejný formulár ---
-    with tabs[0]:
-        st.subheader(f"Feedback {year}")
-        st.caption("Ďakujeme, že nám pomáhate zlepšovať Saxophobiu. Formulár je anonymný; meno je nepovinné.")
+    # ---------- VEREJNÝ FORMULÁR ----------
+    with tab_fill:
+        st.subheader(f"{txt['feedback_header']} {year}")
+        st.caption(txt["feedback_intro"])
 
-        liked = st.text_area("What did you like about Saxophobia?")
-        improve = st.text_area("What would you advise us to improve?")
-        lectors_next = st.text_area("Which lectors would you welcome next time?")
+        liked = st.text_area(txt["feedback_liked"])
+        improve = st.text_area(txt["feedback_improve"])
+        lectors_next = st.text_area(txt["feedback_lectors"])
 
         q_df = load_feedback_questions(conn, year)
         answers = {}
+
         if q_df.empty:
-            st.info("Pre tento rok zatiaľ nie sú nastavené žiadne workshopové otázky.")
+            msg = (
+                "Pre tento rok zatiaľ nie sú nastavené žiadne workshopové otázky."
+                if lang == "SK"
+                else "There are no workshop questions set for this year yet."
+            )
+            st.info(msg)
         else:
-            st.markdown("### Workshops")
+            st.markdown(f"### {txt['feedback_workshops']}")
             for _, row in q_df.iterrows():
                 if int(row["enabled"]) != 1:
                     continue
-                qid = int(row["id"])
-                qtxt = row["question"]
-                answers[str(qid)] = st.radio(
-                    qtxt,
-                    options=["Yes", "No", "I didn't attend"],
+                qid = str(int(row["id"]))
+                options = (
+                    ["Áno", "Nie", "Nezúčastnil som sa"]
+                    if lang == "SK"
+                    else ["Yes", "No", "I didn't attend"]
+                )
+                answers[qid] = st.radio(
+                    row["question"],
+                    options=options,
                     horizontal=True,
-                    key=f"ws_{qid}"
+                    key=f"ws_{qid}",
                 )
 
-        workshop_topics = st.text_area("What workshop content would you like to see next time?")
-        other_comment = st.text_area("You can leave us any other comment here:")
-        name_optional = st.text_input("Your name (optional):")
+        workshop_topics = st.text_area(txt["feedback_topics"])
+        other_comment = st.text_area(txt["feedback_other"])
+        name_optional = st.text_input(txt["feedback_name_optional"])
 
-        if st.button("Submit feedback"):
-            data = {
+        if st.button(txt["feedback_submit"]):
+            payload = {
                 "year": year,
                 "liked": liked.strip() or None,
                 "improve": improve.strip() or None,
@@ -272,15 +334,16 @@ def page_feedback():
                 "other_comment": other_comment.strip() or None,
                 "name_optional": name_optional.strip() or None,
             }
-            save_feedback_response(conn, data)
-            st.success("Thank you for your feedback!")
+            save_feedback_response(conn, payload)
+            st.success(txt["feedback_success"])
 
-    # --- Admin časť: úprava otázok a export ---
-    with tabs[1]:
+    # ---------- ADMIN – OTÁZKY & EXPORT ----------
+    with tab_admin:
         if not login("admin"):
             st.stop()
 
-        st.markdown("### Otázky k workshopom (pre daný rok)")
+        st.markdown(f"### {txt['feedback_questions_title']}")
+
         q_df = load_feedback_questions(conn, year)
         edited = st.data_editor(
             q_df,
@@ -293,46 +356,66 @@ def page_feedback():
                 "enabled": st.column_config.CheckboxColumn("Enabled"),
             },
         )
-        col_q_save, col_q_seed = st.columns([1,1])
-        with col_q_save:
-            if st.button("Uložiť otázky pre tento rok"):
-                save_feedback_questions(conn, year, edited if isinstance(edited, pd.DataFrame) else q_df)
-                st.success("Otázky uložené.")
-        with col_q_seed:
-            if st.button("Doplniť predvolené otázky (ak chýbajú)"):
-                seed_feedback_questions_if_empty(conn, year)
-                st.success("Predvolené otázky doplnené.")
 
-        st.markdown("### Export odpovedí")
+        col_q_save, col_q_seed = st.columns([1, 1])
+        with col_q_save:
+            if st.button(txt["feedback_save_questions"]):
+                save_feedback_questions(
+                    conn,
+                    year,
+                    edited if isinstance(edited, pd.DataFrame) else q_df,
+                )
+                msg = "Otázky uložené." if lang == "SK" else "Questions saved."
+                st.success(msg)
+
+        with col_q_seed:
+            if st.button(txt["feedback_add_default_q"]):
+                seed_feedback_questions_if_empty(conn, year)
+                msg = (
+                    "Predvolené otázky doplnené."
+                    if lang == "SK"
+                    else "Default questions added (if missing)."
+                )
+                st.success(msg)
+
+        st.markdown(f"### {txt['feedback_export']}")
         resp = pd.read_sql_query(
             "SELECT * FROM feedback_responses WHERE year=? ORDER BY created_at DESC",
-            conn, params=(year,)
+            conn,
+            params=(year,),
         )
-        # rozbaliť JSON s odpoveďami na stĺpce podľa otázok
+
         if not resp.empty:
-            qmap = load_feedback_questions(conn, year)
-            qmap = {int(r["id"]): r["question"] for _, r in qmap.iterrows()}
+            # rozbaliť JSON odpovede na stĺpce podľa otázok
+            qmap_df = load_feedback_questions(conn, year)
+            qmap = {int(r["id"]): r["question"] for _, r in qmap_df.iterrows()}
+
             def _answers_to_cols(js):
                 d = from_json(js) or {}
                 out = {}
                 for qid, qtext in qmap.items():
                     out[qtext] = d.get(str(qid))
                 return pd.Series(out)
+
             ws_cols = resp["workshop_answers"].apply(_answers_to_cols)
-            export_df = pd.concat([
-                resp.drop(columns=["workshop_answers"]),
-                ws_cols
-            ], axis=1)
+            export_df = pd.concat(
+                [resp.drop(columns=["workshop_answers"]), ws_cols],
+                axis=1,
+            )
+
             st.dataframe(export_df, use_container_width=True)
             xlsx = to_excel_bytes(export_df)
+
+            filename = f"feedback_{year}.xlsx"
             st.download_button(
-                f"Stiahnuť XLSX – Feedback {year}",
+                txt["feedback_export"],
                 data=xlsx,
-                file_name=f"feedback_{year}.xlsx",
+                file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
         else:
-            st.info("Zatiaľ bez odpovedí pre tento rok.")
+            msg = "Zatiaľ bez odpovedí pre tento rok." if lang == "SK" else "No responses for this year yet."
+            st.info(msg)
 
 
 def _gmail_ready_message():
