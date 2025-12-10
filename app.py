@@ -798,14 +798,31 @@ def capacity_overview(reg_df: pd.DataFrame):
 def save_repertoire(conn: sqlite3.Connection, df_rep: pd.DataFrame):
     """Uloží vybrané party (Skladba 1–5) podľa ID."""
     cur = conn.cursor()
-    cols = [f"piece{i}_part" for i in range(1,6)]
+    cols = [f"piece{i}_part" for i in range(1, 6)]
+
     for _, r in df_rep.iterrows():
+        # Bez ID nič neukladáme
         if "id" not in r or pd.isna(r["id"]):
             continue
+
+        values = []
+        for c in cols:
+            v = r.get(c)
+
+            # Streamlit vie niekedy vrátiť list (napr. [1]) – zoberieme prvú hodnotu
+            if isinstance(v, (list, tuple)):
+                v = v[0] if v else None
+
+            values.append(v)
+
         placeholders = ", ".join([f"{c}=?" for c in cols])
-        values = [r.get(c) for c in cols]
-        cur.execute(f"UPDATE registrations SET {placeholders} WHERE id=?", values + [int(r["id"])])
+        cur.execute(
+            f"UPDATE registrations SET {placeholders} WHERE id=?",
+            values + [int(r["id"])],
+        )
+
     conn.commit()
+
 
 def _get_gmail_creds():
     """Načítaj prihlasovacie údaje z .streamlit/secrets.toml"""
