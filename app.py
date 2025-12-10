@@ -711,7 +711,7 @@ def page_application():
 def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
     cur = conn.cursor()
 
-    # Stĺpce, ktoré chceme zapisovať
+    # Stĺpce, ktoré CHCEME zapisovať
     desired_cols = [
         "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
@@ -719,11 +719,11 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
         "room_code",
     ]
 
-    # Zistíme, ktoré stĺpce reálne existujú v DB
+    # Zistíme, ktoré stĺpce naozaj existujú v DB
     cur.execute("PRAGMA table_info(registrations)")
     db_cols = {row[1] for row in cur.fetchall()}
 
-    # Budeme používať len prienik: existuje v DB aj v DataFrame
+    # Použijeme len prienik: existuje v DB aj v DataFrame
     cols = [c for c in desired_cols if c in db_cols and c in df.columns]
 
     for _, r in df.iterrows():
@@ -732,15 +732,29 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
         if reg_id is None or (pd.isna(reg_id)):
             continue
 
-        placeholders = ", ".join([f"{c}=?" for c in cols])
-        values = [r.get(c) for c in cols]
+        values = []
+        for c in cols:
+            v = r.get(c)
 
+            # Ak je tam zoznam (hlavne pri room_code), prekonvertuj na string
+            if isinstance(v, (list, tuple)):
+                if c == "room_code":
+                    # vyber prvý kód izby alebo None
+                    v = v[0] if v else None
+                else:
+                    # ostatné listy spojíme čiarkou
+                    v = ", ".join(str(x) for x in v)
+
+            values.append(v)
+
+        placeholders = ", ".join(f"{c}=?" for c in cols)
         cur.execute(
             f"UPDATE registrations SET {placeholders} WHERE id=?",
             values + [int(reg_id)],
         )
 
     conn.commit()
+
 
 
 
