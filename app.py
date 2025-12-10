@@ -1694,11 +1694,15 @@ def main():
     st.set_page_config(page_title="Saxophobia – registrácia", layout="wide")
     init_db()
 
-    st.sidebar.title("Saxophobia")
+    # LOGO v sidebare
+    st.sidebar.image("Logo.jpg", use_column_width=True)
+    st.sidebar.markdown("### Saxophobia")
+
     page = st.sidebar.radio(
         "Navigácia",
         ["Prihláška", "Organizátor", "Admin", "Feedback"],
     )
+
 
     if page == "Prihláška":
         page_application()
