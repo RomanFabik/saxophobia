@@ -1209,8 +1209,7 @@ def page_organizer():
             conn.commit()
 
             st.success("Všetky registrácie a priradenia boli vymazané.")
-            st.experimental_rerun()
-
+            st.rerun()
 
     # --- 📧 EMAILY ORGANIZÁTORA ---
     st.subheader("📧 Odoslať e-maily")
