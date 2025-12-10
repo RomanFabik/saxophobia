@@ -1807,40 +1807,39 @@ def main():
     st.set_page_config(page_title="Saxophobia – registrácia", layout="wide")
     init_db()
 
-    # LOGO v sidebare
+    # Aktuálny jazyk zo session (default SK)
+    current_lang = st.session_state.get("lang", "SK")
+    txt = TEXTS.get(current_lang, TEXTS["SK"])
+
+    # Sidebar – logo a názov
     st.sidebar.image("Logo.jpg", use_column_width=True)
     st.sidebar.markdown("### Saxophobia")
 
     # Prepínač jazyka
-    lang = st.sidebar.radio("Language", ["SK", "EN"], horizontal=True)
-    st.session_state["lang"] = lang
-    
-    lang = st.session_state.get("lang", "SK")
-txt = TEXTS.get(lang, TEXTS["SK"])
+    st.sidebar.markdown(f"**{txt['lang_label']}**")
+    lang = st.sidebar.radio(
+        "",
+        ["SK", "EN"],
+        horizontal=True,
+        key="lang",
+        index=0 if current_lang == "SK" else 1,
+    )
 
-st.sidebar.title("Saxophobia")
+    # Po zmene jazyka refreshneme texty
+    txt = TEXTS.get(lang, TEXTS["SK"])
 
-# Prepínač jazyka
-st.sidebar.markdown(f"**{txt['lang_label']}**")
-st.sidebar.radio(
-    "",
-    ["SK", "EN"],
-    horizontal=True,
-    key="lang",
-)
+    # Navigácia podľa jazyka
+    page = st.sidebar.radio(
+        txt["nav_label"],
+        [
+            txt["nav_application"],
+            txt["nav_organizer"],
+            txt["nav_admin"],
+            txt["nav_feedback"],
+        ],
+    )
 
-# Navigácia podľa jazyka
-page = st.sidebar.radio(
-    txt["nav_label"],
-    [
-        txt["nav_application"],
-        txt["nav_organizer"],
-        txt["nav_admin"],
-        txt["nav_feedback"],
-    ],
-)
-
-
+    # Router na stránky
     if page == txt["nav_application"]:
         page_application()
     elif page == txt["nav_organizer"]:
