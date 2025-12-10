@@ -3,6 +3,17 @@
 """
 Saxophobia – registrácia účastníkov + plánovanie lekcií (MVP)
 """
+def hide_streamlit_menu():
+    hide_menu_style = """
+        <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            .stActionButton {visibility: hidden;}
+        </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 
 from urllib.parse import quote
 import html
@@ -1657,6 +1668,9 @@ def build_matrix_like_excel(conn: sqlite3.Connection) -> pd.DataFrame:
 # -----------------------------
 # UI – navigácia
 # -----------------------------
+
+hide_streamlit_menu()
+
 
 def main():
     st.set_page_config(page_title="Saxophobia – registrácia", layout="wide")
