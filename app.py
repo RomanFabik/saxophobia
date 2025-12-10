@@ -31,24 +31,15 @@ from typing import List, Dict, Optional, Tuple
 # -----------------------------
 TEXTS = {
     "SK": {
-        ...
+        # --- Navigácia ---
         "nav_application": "Prihláška",
         "nav_organizer": "Organizátor",
         "nav_admin": "Admin",
         "nav_feedback": "Feedback",
         "nav_label": "Navigácia",
         "lang_label": "Jazyk",
-    },
-    "EN": {
-        ...
-        "nav_application": "Application",
-        "nav_organizer": "Organizer",
-        "nav_admin": "Admin",
-        "nav_feedback": "Feedback",
-        "nav_label": "Navigation",
-        "lang_label": "Language",
-    },
-    "SK": {
+
+        # --- Prihláška ---
         "application_header": "Prihláška – Saxophobia",
         "application_fill": "Vyplňte prosím údaje. * (povinné)",
         "name": "Meno a priezvisko *",
@@ -63,6 +54,15 @@ TEXTS = {
     },
 
     "EN": {
+        # --- Navigation ---
+        "nav_application": "Application",
+        "nav_organizer": "Organizer",
+        "nav_admin": "Admin",
+        "nav_feedback": "Feedback",
+        "nav_label": "Navigation",
+        "lang_label": "Language",
+
+        # --- Application ---
         "application_header": "Application – Saxophobia",
         "application_fill": "Please fill in the required information. * (required)",
         "name": "Full name *",
