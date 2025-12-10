@@ -648,14 +648,15 @@ def page_application():
         phone = st.text_input("Telefón")
         age = st.number_input("Vek", min_value=5, max_value=100, value=18)
         course = st.selectbox("Kurz", options=COURSES)
-        instrument = st.selectbox("Nástroj", options=INSTRUMENTS)
+        # MULTIVÝBER nástroja
+        instrument = st.multiselect("Nástroj", options=INSTRUMENTS)
         school = st.text_input("Škola (napr. ZUŠ, konzervatórium)")
         year_of_study = st.text_input("Ročník štúdia")
 
         people_count = st.number_input("Počet ľudí v skupine (1 = jednotlivec)", 1, 10, 1)
         ensemble_type = st.selectbox("Typ (jednotlivec / duo / trio / kvarteto ...)", ENSEMBLE_TYPES)
         member_names = st.text_input("Názov hudobného telesa")
-        lesson_count = 0  # určije organizátor
+        lesson_count = 0  # určí organizátor
 
         # načítaj lektorov z DB
         conn = get_conn()
@@ -688,6 +689,9 @@ def page_application():
             if not name or not email:
                 st.error("Meno a e-mail sú povinné.")
             else:
+                # PREVOD multiselect -> text pre DB
+                instrument_str = ", ".join(instrument) if instrument else ""
+
                 cur = conn.cursor()
                 cur.execute(
                     """
@@ -700,13 +704,27 @@ def page_application():
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        datetime.utcnow().isoformat(), name, email, phone, int(age), course, instrument,
-                        school, year_of_study, int(people_count), ensemble_type, member_names,
-                        0, to_json(preferred_lectors),
+                        datetime.utcnow().isoformat(),
+                        name,
+                        email,
+                        phone,
+                        int(age),
+                        course,
+                        instrument_str,  # <- uložíme text, nie list
+                        school,
+                        year_of_study,
+                        int(people_count),
+                        ensemble_type,
+                        member_names,
+                        0,
+                        to_json(preferred_lectors),
                         1 if wants_accommodation else 0,
                         arrival_date.isoformat(),
                         departure_date.isoformat(),
-                        room_type, int(breakfasts), int(lunches), notes,
+                        room_type,
+                        int(breakfasts),
+                        int(lunches),
+                        notes,
                         None,  # room_code – doplní organizátor
                     ),
                 )
