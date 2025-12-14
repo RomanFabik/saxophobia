@@ -1185,31 +1185,45 @@ def page_organizer():
     else:
         st.info("Zatiaľ bez prihlášok.")
 
-    # Kapacitné plnenie – prehľad (používa plné df)
-    if not df.empty:
-        capacity_overview(df)
-        # --- Hromadné vymazanie registrácií (nový ročník) ---
-    with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
-        st.warning(
-            "Toto vymaže všetky prihlášky zo systému vrátane ich priradení "
-            "k lekciám. Použi len pri začiatku nového ročníka."
-        )
+# Kapacitné plnenie – prehľad (používa plné df)
+if not df.empty:
+    capacity_overview(df)
 
-        confirm = st.checkbox(
-            "Áno, chcem vymazať všetky registrácie a súvisiace priradenia.",
-            value=False,
-        )
+# --- Hromadné vymazanie registrácií (nový ročník) ---
+with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
+    st.warning(
+        "Toto vymaže všetky prihlášky zo systému vrátane ich priradení "
+        "k lekciám. Použi len pri začiatku nového ročníka."
+    )
 
-        if confirm and st.button("Vymazať všetky registrácie"):
-            cur = conn.cursor()
-            # Najprv vymažeme priradenia lekcií
-            cur.execute("DELETE FROM assignments")
-            # Potom všetky registrácie
-            cur.execute("DELETE FROM registrations")
-            conn.commit()
+    confirm = st.checkbox(
+        "Áno, chcem vymazať všetky registrácie a súvisiace priradenia.",
+        value=False,
+        key="confirm_delete_regs",
+    )
 
-            st.success("Všetky registrácie a priradenia boli vymazané.")
-            st.rerun()
+    if st.button("Vymazať všetky registrácie", disabled=not confirm, key="btn_delete_regs"):
+        cur = conn.cursor()
+
+        # 1) zmazať závislé tabuľky (priradenia)
+        cur.execute("DELETE FROM assignments")
+
+        # 2) zmazať registrácie
+        cur.execute("DELETE FROM registrations")
+
+        # 3) reset AUTOINCREMENT počítadiel (SQLite)
+        # funguje len pre tabuľky, ktoré majú AUTOINCREMENT (ty ho máš)
+        try:
+            cur.execute("DELETE FROM sqlite_sequence WHERE name='assignments'")
+            cur.execute("DELETE FROM sqlite_sequence WHERE name='registrations'")
+        except Exception:
+            pass  # ak by sqlite_sequence neexistovala (pri non-autoincrement DB), ignoruj
+
+        conn.commit()
+
+        st.success("Všetky registrácie a priradenia boli vymazané. Nové ID začne od 1.")
+        st.rerun()
+
 
     # --- 📧 EMAILY ORGANIZÁTORA ---
     st.subheader("📧 Odoslať e-maily")
