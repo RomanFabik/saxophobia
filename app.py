@@ -1185,10 +1185,6 @@ def page_organizer():
     else:
         st.info("Zatiaľ bez prihlášok.")
 
-# Kapacitné plnenie – prehľad (používa plné df)
-if not df.empty:
-    capacity_overview(df)
-
 # --- Hromadné vymazanie registrácií (nový ročník) ---
 with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
     st.warning(
@@ -1218,6 +1214,12 @@ with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
 
         st.success("Všetky registrácie a priradenia boli vymazané. ID začne od 1.")
         st.rerun()
+
+
+# Kapacitné plnenie – prehľad (používa plné df)
+if not df.empty:
+    capacity_overview(df)
+
 
     # --- 📧 EMAILY ORGANIZÁTORA ---
     st.subheader("📧 Odoslať e-maily")
