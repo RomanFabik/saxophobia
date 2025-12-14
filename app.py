@@ -1946,15 +1946,16 @@ def main():
     # Po zmene jazyka refreshneme texty
     txt = TEXTS.get(lang, TEXTS["SK"])
 
-    # Navigácia podľa jazykapage = st.sidebar.radio(
-    txt["nav_label"],
-    [
-        txt["nav_application"],
-        txt["nav_organizer"],
-        txt["nav_admin"],
-        txt["nav_feedback"],
-    ],
-
+    # Navigácia podľa jazyka
+    page = st.sidebar.radio(
+        txt["nav_label"],
+        [
+            txt["nav_application"],
+            txt["nav_organizer"],
+            txt["nav_admin"],
+            txt["nav_feedback"],
+        ],
+    )
 
     # Router na stránky
     if page == txt["nav_application"]:
