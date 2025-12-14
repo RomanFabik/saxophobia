@@ -1954,7 +1954,6 @@ def main():
         txt["nav_admin"],
         txt["nav_feedback"],
     ],
-)
 
 
     # Router na stránky
