@@ -1185,41 +1185,31 @@ def page_organizer():
     else:
         st.info("Zatiaľ bez prihlášok.")
 
-# --- Hromadné vymazanie registrácií (nový ročník) ---
-with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
-    st.warning(
-        "Toto vymaže všetky prihlášky zo systému vrátane ich priradení "
-        "k lekciám. Použi len pri začiatku nového ročníka."
-    )
+    # Kapacitné plnenie – prehľad (používa plné df)
+    if not df.empty:
+        capacity_overview(df)
+        # --- Hromadné vymazanie registrácií (nový ročník) ---
+    with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
+        st.warning(
+            "Toto vymaže všetky prihlášky zo systému vrátane ich priradení "
+            "k lekciám. Použi len pri začiatku nového ročníka."
+        )
 
-    confirm = st.checkbox(
-        "Áno, chcem vymazať všetky registrácie a súvisiace priradenia.",
-        value=False,
-    )
+        confirm = st.checkbox(
+            "Áno, chcem vymazať všetky registrácie a súvisiace priradenia.",
+            value=False,
+        )
 
-    if st.button("Vymazať všetky registrácie", disabled=not confirm):
-        cur = conn.cursor()
+        if confirm and st.button("Vymazať všetky registrácie"):
+            cur = conn.cursor()
+            # Najprv vymažeme priradenia lekcií
+            cur.execute("DELETE FROM assignments")
+            # Potom všetky registrácie
+            cur.execute("DELETE FROM registrations")
+            conn.commit()
 
-        # Najprv vymažeme priradenia lekcií
-        cur.execute("DELETE FROM assignments")
-        # Potom všetky registrácie
-        cur.execute("DELETE FROM registrations")
-
-        # Reset AUTOINCREMENT počítadiel (aby ID začalo od 1)
-        # (funguje v SQLite, keď je tabuľka prázdna)
-        cur.execute("DELETE FROM sqlite_sequence WHERE name='assignments'")
-        cur.execute("DELETE FROM sqlite_sequence WHERE name='registrations'")
-
-        conn.commit()
-
-        st.success("Všetky registrácie a priradenia boli vymazané. ID začne od 1.")
-        st.rerun()
-
-
-# Kapacitné plnenie – prehľad (používa plné df)
-if not df.empty:
-    capacity_overview(df)
-
+            st.success("Všetky registrácie a priradenia boli vymazané.")
+            st.rerun()
 
     # --- 📧 EMAILY ORGANIZÁTORA ---
     st.subheader("📧 Odoslať e-maily")
