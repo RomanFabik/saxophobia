@@ -1970,6 +1970,38 @@ def main():
             if k in st.session_state:
                 del st.session_state[k]
         st.rerun()
+    # --- Sidebar login panel (vždy viditeľný) ---
+    st.sidebar.divider()
+    with st.sidebar.expander("Prihlásenie (organizátor/admin)"):
+        # Organizer login
+        if not st.session_state.get("auth_organizer_ok"):
+            org_pwd = st.text_input("Heslo organizátor", type="password", key="sidebar_pwd_organizer")
+            if st.button("Prihlásiť ako organizátor", key="sidebar_login_organizer"):
+                organizer_pw = get_secret("auth.organizer_password", "organizator123")
+                if org_pwd == organizer_pw:
+                    st.session_state["auth_organizer_ok"] = True
+                    st.sidebar.success("OK – organizátor prihlásený.")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Nesprávne heslo organizátora.")
+        else:
+            st.sidebar.success("Organizátor prihlásený ✅")
+
+        st.sidebar.divider()
+
+        # Admin login
+        if not st.session_state.get("auth_admin_ok"):
+            adm_pwd = st.text_input("Heslo admin", type="password", key="sidebar_pwd_admin")
+                if st.button("Prihlásiť ako admin", key="sidebar_login_admin"):
+                admin_pw = get_secret("auth.admin_password", "admin123")
+                if adm_pwd == admin_pw:
+                    st.session_state["auth_admin_ok"] = True
+                    st.sidebar.success("OK – admin prihlásený.")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Nesprávne heslo admina.")
+        else:
+            st.sidebar.success("Admin prihlásený ✅")
 
 
     # Router na stránky
