@@ -1964,6 +1964,13 @@ def main():
 
     page = st.sidebar.radio(txt["nav_label"], menu_items)
 
+    st.sidebar.divider()
+    if st.sidebar.button("Odhlásiť (admin/organizátor)"):
+        for k in ["auth_organizer_ok", "auth_admin_ok"]:
+            if k in st.session_state:
+                del st.session_state[k]
+        st.rerun()
+
 
     # Router na stránky
     if page == txt["nav_application"]:
