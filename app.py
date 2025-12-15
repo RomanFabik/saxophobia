@@ -1947,15 +1947,23 @@ def main():
     txt = TEXTS.get(lang, TEXTS["SK"])
 
     # Navigácia podľa jazyka
-    page = st.sidebar.radio(
-        txt["nav_label"],
-        [
-            txt["nav_application"],
-            txt["nav_organizer"],
-            txt["nav_admin"],
-            txt["nav_feedback"],
-        ],
-    )
+    # Dynamické menu podľa prihlásenia
+    menu_items = [txt["nav_application"], txt["nav_feedback"]]
+
+    # organizer vidí Organizátor
+    if st.session_state.get("auth_organizer_ok"):
+        menu_items.insert(1, txt["nav_organizer"])
+
+    # admin vidí Admin (a ideálne aj Organizátor)
+    if st.session_state.get("auth_admin_ok"):
+        if txt["nav_organizer"] not in menu_items:
+            menu_items.insert(1, txt["nav_organizer"])
+        # Admin dáme za Organizátora
+        if txt["nav_admin"] not in menu_items:
+            menu_items.insert(2, txt["nav_admin"])
+
+    page = st.sidebar.radio(txt["nav_label"], menu_items)
+
 
     # Router na stránky
     if page == txt["nav_application"]:
