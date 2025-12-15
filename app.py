@@ -1989,19 +1989,20 @@ def main():
 
         st.sidebar.divider()
 
-        # Admin login
-        if not st.session_state.get("auth_admin_ok"):
-            adm_pwd = st.text_input("Heslo admin", type="password", key="sidebar_pwd_admin")
-                if st.button("Prihlásiť ako admin", key="sidebar_login_admin"):
-                admin_pw = get_secret("auth.admin_password", "admin123")
-                if adm_pwd == admin_pw:
-                    st.session_state["auth_admin_ok"] = True
-                    st.sidebar.success("OK – admin prihlásený.")
-                    st.rerun()
-                else:
-                    st.sidebar.error("Nesprávne heslo admina.")
+# Admin login
+if not st.session_state.get("auth_admin_ok"):
+    adm_pwd = st.text_input("Heslo admin", type="password", key="sidebar_pwd_admin")
+    if st.button("Prihlásiť ako admin", key="sidebar_login_admin"):
+        admin_pw = get_secret("auth.admin_password", "admin123")
+        if adm_pwd == admin_pw:
+            st.session_state["auth_admin_ok"] = True
+            st.sidebar.success("OK – admin prihlásený.")
+            st.rerun()
         else:
-            st.sidebar.success("Admin prihlásený ✅")
+            st.sidebar.error("Nesprávne heslo admina.")
+else:
+    st.sidebar.success("Admin prihlásený ✅")
+
 
 
     # Router na stránky
