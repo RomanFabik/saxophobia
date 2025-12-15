@@ -1947,63 +1947,15 @@ def main():
     txt = TEXTS.get(lang, TEXTS["SK"])
 
     # Navigácia podľa jazyka
-    # Dynamické menu podľa prihlásenia
-    menu_items = [txt["nav_application"], txt["nav_feedback"]]
-
-    # organizer vidí Organizátor
-    if st.session_state.get("auth_organizer_ok"):
-        menu_items.insert(1, txt["nav_organizer"])
-
-    # admin vidí Admin (a ideálne aj Organizátor)
-    if st.session_state.get("auth_admin_ok"):
-        if txt["nav_organizer"] not in menu_items:
-            menu_items.insert(1, txt["nav_organizer"])
-        # Admin dáme za Organizátora
-        if txt["nav_admin"] not in menu_items:
-            menu_items.insert(2, txt["nav_admin"])
-
-    page = st.sidebar.radio(txt["nav_label"], menu_items)
-
-    st.sidebar.divider()
-    if st.sidebar.button("Odhlásiť (admin/organizátor)"):
-        for k in ["auth_organizer_ok", "auth_admin_ok"]:
-            if k in st.session_state:
-                del st.session_state[k]
-        st.rerun()
-    # --- Sidebar login panel (vždy viditeľný) ---
-    st.sidebar.divider()
-    with st.sidebar.expander("Prihlásenie (organizátor/admin)"):
-        # Organizer login
-        if not st.session_state.get("auth_organizer_ok"):
-            org_pwd = st.text_input("Heslo organizátor", type="password", key="sidebar_pwd_organizer")
-            if st.button("Prihlásiť ako organizátor", key="sidebar_login_organizer"):
-                organizer_pw = get_secret("auth.organizer_password", "organizator123")
-                if org_pwd == organizer_pw:
-                    st.session_state["auth_organizer_ok"] = True
-                    st.sidebar.success("OK – organizátor prihlásený.")
-                    st.rerun()
-                else:
-                    st.sidebar.error("Nesprávne heslo organizátora.")
-        else:
-            st.sidebar.success("Organizátor prihlásený ✅")
-
-        st.sidebar.divider()
-
-# Admin login
-if not st.session_state.get("auth_admin_ok"):
-    adm_pwd = st.text_input("Heslo admin", type="password", key="sidebar_pwd_admin")
-    if st.button("Prihlásiť ako admin", key="sidebar_login_admin"):
-        admin_pw = get_secret("auth.admin_password", "admin123")
-        if adm_pwd == admin_pw:
-            st.session_state["auth_admin_ok"] = True
-            st.sidebar.success("OK – admin prihlásený.")
-            st.rerun()
-        else:
-            st.sidebar.error("Nesprávne heslo admina.")
-else:
-    st.sidebar.success("Admin prihlásený ✅")
-
-
+    page = st.sidebar.radio(
+        txt["nav_label"],
+        [
+            txt["nav_application"],
+            txt["nav_organizer"],
+            txt["nav_admin"],
+            txt["nav_feedback"],
+        ],
+    )
 
     # Router na stránky
     if page == txt["nav_application"]:
