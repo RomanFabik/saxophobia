@@ -798,134 +798,28 @@ def page_application():
         year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
         year_of_study = st.text_input(year_label)
 
-def page_application():
-    lang = st.session_state.get("lang", "SK")
-    txt = TEXTS.get(lang, TEXTS["SK"])
-
-    st.header(txt["application_header"])
-    st.write(txt["application_fill"])
-
-    # --- Skupina / ensemble (MIMO form) ---
-    AUTO_PEOPLE = {
-        "jednotlivec": 1,
-        "duo": 2,
-        "trio": 3,
-        "kvarteto": 4,
-        "kvinteto": 5,
-    }
-
-    ensemble_label = (
-        "Typ (jednotlivec / duo / trio / kvarteto ...)"
-        if lang == "SK" else
-        "Type (solo / duo / trio / quartet ...)"
-    )
-    people_label = (
-        "Počet ľudí v skupine (1 = jednotlivec)"
-        if lang == "SK" else
-        "Number of people in the group (1 = solo)"
-    )
-    members_label = (
-        "Názov hudobného telesa"
-        if lang == "SK" else
-        "Name of ensemble / group"
-    )
-
-    ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES, key="ensemble_type_outside")
-
-    # automatický počet (pri "iné" necháme manuálny)
-    if ensemble_type in AUTO_PEOPLE:
-        people_count = AUTO_PEOPLE[ensemble_type]
-        st.number_input(
-            people_label,
-            min_value=1, max_value=10,
-            value=int(people_count),
-            disabled=True,
-            key="people_count_readonly",
-        )
-    else:
-        people_count = st.number_input(
-            people_label,
-            min_value=1, max_value=10,
-            value=1,
-            step=1,
-            disabled=False,
-            key="people_count_manual",
-        )
-
-    member_names = st.text_input(members_label, key="member_names_outside")
-
-    # --- FORM (iba raz) ---
-    with st.form("application_form"):
-        name = st.text_input(txt["name"])
-        email = st.text_input(txt["email"])
-        phone = st.text_input(txt["phone"])
-        age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
-        course = st.selectbox(txt["course"], options=COURSES)
-        instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
-
-        school_label = txt["school"] + (
-            " (napr. ZUŠ, konzervatórium)" if lang == "SK"
-            else " (e.g. music school, conservatory)"
-        )
-        school = st.text_input(school_label)
-
-        year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
-        year_of_study = st.text_input(year_label)
-
-        # lektori (bez callbackov OK)
-        conn = get_conn()
-        lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
-        lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
-
-        pref_label = (
-            "Preferovaní lektori (v poradí priority)"
+        # Skupina / ensemble
+        ensemble_label = (
+            "Typ (jednotlivec / duo / trio / kvarteto ...)"
             if lang == "SK" else
-            "Preferred teachers (in order of priority)"
+            "Type (solo / duo / trio / quartet ...)"
         )
-        preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
-
-        submit_label = txt.get("submit", "Odoslať prihlášku" if lang == "SK" else "Submit application")
-        submitted = st.form_submit_button(submit_label)
-
-        if submitted:
-            if not name or not email:
-                st.error("Meno a e-mail sú povinné." if lang == "SK" else "Name and e-mail are required.")
-            else:
-                instrument_str = ", ".join(instrument) if instrument else ""
-
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    INSERT INTO registrations (
-                        created_at, name, email, phone, age, course, instrument,
-                        school, year_of_study, people_count, ensemble_type, member_names,
-                        lesson_count, preferred_lectors, wants_accommodation,
-                        arrival_date, departure_date, room_type, breakfasts, lunches, notes,
-                        room_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        datetime.utcnow().isoformat(),
-                        name, email, phone, int(age), course, instrument_str,
-                        school, year_of_study,
-                        int(people_count),          # ✅ použije sa auto/manuál hodnota
-                        ensemble_type,              # ✅ typ z selectboxu mimo form
-                        member_names,               # ✅ názov telesa mimo form
-                        0,
-                        to_json(preferred_lectors),
-                        0,
-                        EVENT_START.isoformat(),
-                        EVENT_END.isoformat(),
-                        ROOM_TYPES[0],
-                        0,
-                        0,
-                        "",
-                        None,
-                    ),
-                )
-                conn.commit()
-                st.success(txt["success"])
-
+        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
+        
+        people_label = (
+            "Počet ľudí v skupine (1 = jednotlivec)"
+            if lang == "SK" else
+            "Number of people in the group (1 = solo)"
+        )
+        people_count = st.number_input(people_label, 1, 10, 1)
+    
+        members_label = (
+            "Názov hudobného telesa"
+            if lang == "SK" else
+            "Name of ensemble / group"
+        )
+        member_names = st.text_input(members_label)
+        lesson_count = 0  # určí organizátor
 
         # Lektori
         conn = get_conn()
