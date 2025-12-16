@@ -136,7 +136,7 @@ DEFAULT_LECTORS = [
 ]
 
 
-ENSEMBLE_TYPES = ["jednotlivec", "duo", "trio", "kvarteto", "kvinteto", "iné"]
+ENSEMBLE_TYPES = ["jednotlivec/individual", "duo", "trio", "kvarteto", "kvinteto", "iné/other"]
 ROOM_TYPES = ["jednokapsule/single capsule", "dvojkapsule/double capsule", "trojlôžková/triple", "iné/other"]
 COURSES = ["A", "P", "O"]
 INSTRUMENTS = ["sopran sax", "alt sax", "tenor sax", "baryton sax", "bas sax", "kontrabas sax"]
