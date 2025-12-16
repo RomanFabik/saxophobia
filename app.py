@@ -780,72 +780,6 @@ def page_application():
     st.header(txt["application_header"])
     st.write(txt["application_fill"])
 
-def page_application():
-    lang = st.session_state.get("lang", "SK")
-    txt = TEXTS.get(lang, TEXTS["SK"])
-
-    st.header(txt["application_header"])
-    st.write(txt["application_fill"])
-
-    # -----------------------------
-    # Skupina / ensemble (MIMO form – live update funguje)
-    # Poradie: Typ → Počet ľudí → Názov telesa
-    # -----------------------------
-    AUTO_PEOPLE = {
-        "jednotlivec": 1,
-        "duo": 2,
-        "trio": 3,
-        "kvarteto": 4,
-        "kvinteto": 5,
-    }
-
-    ensemble_label = (
-        "Typ (jednotlivec / duo / trio / kvarteto ...)"
-        if lang == "SK" else
-        "Type (solo / duo / trio / quartet ...)"
-    )
-    people_label = (
-        "Počet ľudí v skupine (1 = jednotlivec)"
-        if lang == "SK" else
-        "Number of people in the group (1 = solo)"
-    )
-    members_label = (
-        "Názov hudobného telesa"
-        if lang == "SK" else
-        "Name of ensemble / group"
-    )
-
-    st.session_state.setdefault("ensemble_type", ENSEMBLE_TYPES[0])
-    st.session_state.setdefault("people_count", 1)
-    st.session_state.setdefault("member_names", "")
-
-    ensemble_type = st.selectbox(
-        ensemble_label,
-        ENSEMBLE_TYPES,
-        key="ensemble_type",
-    )
-
-    base_type = (ensemble_type or "").split("/")[0].strip().lower()
-    is_other = "iné" in base_type
-    is_auto = (base_type in AUTO_PEOPLE) and (not is_other)
-
-    if is_auto:
-        st.session_state["people_count"] = int(AUTO_PEOPLE[base_type])
-
-    people_count = st.number_input(
-        people_label,
-        min_value=1,
-        max_value=10,
-        step=1,
-        key="people_count",
-        disabled=is_auto,
-    )
-
-    member_names = st.text_input(members_label, key="member_names")
-
-    # -----------------------------
-    # Zvyšok ide do FORM (submit)
-    # -----------------------------
     with st.form("application_form"):
         # Základné údaje
         name = st.text_input(txt["name"])
@@ -864,27 +798,28 @@ def page_application():
         year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
         year_of_study = st.text_input(year_label)
 
-        # Lektori
-        conn = get_conn()
-        lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
-        lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
-
-        pref_label = (
-            "Preferovaní lektori (v poradí priority)"
+        # Skupina / ensemble
+        ensemble_label = (
+            "Typ (jednotlivec / duo / trio / kvarteto ...)"
             if lang == "SK" else
-            "Preferred teachers (in order of priority)"
+            "Type (solo / duo / trio / quartet ...)"
         )
-        preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
-
-        submitted = st.form_submit_button(txt["submit"])
-
-        if submitted:
-            # tu potom pri INSERT použiješ:
-            # people_count = int(st.session_state["people_count"])
-            # ensemble_type = st.session_state["ensemble_type"]
-            # member_names = st.session_state["member_names"]
-            pass
-
+        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
+        
+        people_label = (
+            "Počet ľudí v skupine (1 = jednotlivec)"
+            if lang == "SK" else
+            "Number of people in the group (1 = solo)"
+        )
+        people_count = st.number_input(people_label, 1, 10, 1)
+    
+        members_label = (
+            "Názov hudobného telesa"
+            if lang == "SK" else
+            "Name of ensemble / group"
+        )
+        member_names = st.text_input(members_label)
+        lesson_count = 0  # určí organizátor
 
         # Lektori
         conn = get_conn()
