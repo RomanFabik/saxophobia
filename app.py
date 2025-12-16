@@ -850,7 +850,7 @@ def page_application():
         room_label = "Typ izby" if lang == "SK" else "Room type"
         room_type = st.selectbox(room_label, ROOM_TYPES)
 
-        _days_inclusive = (_default_departure - _default_arrival).days + 1
+        _days_inclusive = (_default_departure - _default_arrival).days
 
         bfast_label = "Počet raňajok" if lang == "SK" else "Number of breakfasts"
         breakfasts = st.number_input(bfast_label, 0, 10, _days_inclusive)
