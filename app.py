@@ -798,65 +798,68 @@ def page_application():
         year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
         year_of_study = st.text_input(year_label)
 
-        # --- Skupina / ensemble (MIMO form, aby fungoval live update) ---
+# ✅ 1) SKUPINA – MIMO form (žiadne odsadenie pod with st.form)
+AUTO_PEOPLE = {
+    "jednotlivec": 1,
+    "duo": 2,
+    "trio": 3,
+    "kvarteto": 4,
+    "kvinteto": 5,
+}
 
-        AUTO_PEOPLE = {
-            "jednotlivec": 1,
-            "duo": 2,
-            "trio": 3,
-            "kvarteto": 4,
-            "kvinteto": 5,
-        }
+ensemble_label = "Typ (jednotlivec / duo / trio / kvarteto ...)" if lang == "SK" else "Type (solo / duo / trio / quartet ...)"
+people_label   = "Počet ľudí v skupine (1 = jednotlivec)" if lang == "SK" else "Number of people in the group (1 = solo)"
+members_label  = "Názov hudobného telesa" if lang == "SK" else "Name of ensemble / group"
 
-        ensemble_label = (
-            "Typ (jednotlivec / duo / trio / kvarteto ...)"
-            if lang == "SK" else
-            "Type (solo / duo / trio / quartet ...)"
-        )
+if "ensemble_type" not in st.session_state:
+    st.session_state["ensemble_type"] = ENSEMBLE_TYPES[0]
+if "people_count" not in st.session_state:
+    st.session_state["people_count"] = 1
+if "member_names" not in st.session_state:
+    st.session_state["member_names"] = ""
 
-        people_label = (
-            "Počet ľudí v skupine (1 = jednotlivec)"
-            if lang == "SK" else
-            "Number of people in the group (1 = solo)"
-        )
+def _sync_people():
+    t = st.session_state["ensemble_type"]
+    if t in AUTO_PEOPLE:
+        st.session_state["people_count"] = AUTO_PEOPLE[t]
 
-        members_label = (
-            "Názov hudobného telesa"
-            if lang == "SK" else
-            "Name of ensemble / group"
-        )
+ensemble_type = st.selectbox(
+    ensemble_label,
+    ENSEMBLE_TYPES,
+    key="ensemble_type",
+    on_change=_sync_people
+)
 
-        # init
-        if "ensemble_type" not in st.session_state:
-            st.session_state["ensemble_type"] = ENSEMBLE_TYPES[0]
-        if "people_count" not in st.session_state:
-            st.session_state["people_count"] = 1
+is_auto = ensemble_type in AUTO_PEOPLE
+people_count = st.number_input(
+    people_label,
+    min_value=1,
+    max_value=10,
+    step=1,
+    key="people_count",
+    disabled=is_auto
+)
 
-        def _sync_people():
-            t = st.session_state["ensemble_type"]
-            if t in AUTO_PEOPLE:
-                st.session_state["people_count"] = AUTO_PEOPLE[t]
-
-        ensemble_type = st.selectbox(
-            ensemble_label,
-            ENSEMBLE_TYPES,
-            key="ensemble_type",
-            on_change=_sync_people
-        )
-
-        is_auto = ensemble_type in AUTO_PEOPLE
-        people_count = st.number_input(
-            people_label,
-            min_value=1,
-            max_value=10,
-            step=1,
-            key="people_count",
-            disabled=is_auto
-        )
-
-        member_names = st.text_input(members_label, key="member_names")
+member_names = st.text_input(members_label, key="member_names")
 
 
+# ✅ 2) FORM – až potom
+with st.form("application_form"):
+    name = st.text_input(txt["name"])
+    email = st.text_input(txt["email"])
+    phone = st.text_input(txt["phone"])
+    age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
+    course = st.selectbox(txt["course"], options=COURSES)
+    instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
+    school = st.text_input(txt["school"])
+    year_of_study = st.text_input("Ročník štúdia" if lang == "SK" else "Year of study")
+
+    # lektori môžu byť kľudne vnútri form (bez callbackov je to OK)
+    conn = get_conn()
+    lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
+    lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
+    pref_label = "Preferovaní lektori (v poradí priority)" if lang == "SK" else "Preferred teachers (in order of priority)"
+    preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
 
         # Lektori
         conn = get_conn()
