@@ -25,6 +25,18 @@ import json
 from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Optional, Tuple
 
+st.set_page_config(
+    page_title="Saxophobia – registrácia",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "Get help": None,
+        "Report a Bug": None,
+        "About": None,
+    },
+)
+
+
 # -----------------------------
 # Jazykové texty
 # -----------------------------
@@ -2003,9 +2015,28 @@ st.set_page_config(
 )
 
 def main():
-    st.set_page_config(page_title="Saxophobia – registrácia", layout="wide")
+    hide_streamlit_menu()
     init_db()
 
+def hide_streamlit_menu():
+    st.markdown(
+        """
+        <style>
+            /* hlavné Streamlit menu */
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+
+            /* floating toolbar (ružová + červená ikonka) */
+            [data-testid="stToolbar"] {display: none !important;}
+            [data-testid="stDecoration"] {display: none !important;}
+            [data-testid="stStatusWidget"] {display: none !important;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    
     # Aktuálny jazyk zo session (default SK)
     current_lang = st.session_state.get("lang", "SK")
     txt = TEXTS.get(current_lang, TEXTS["SK"])
