@@ -939,7 +939,7 @@ def page_application():
 
     room_type = st.selectbox("Typ izby" if lang == "SK" else "Room type", ROOM_TYPES, key="app_room_type")
 
-    _days_inclusive = (EVENT_END - EVENT_START).days + 1
+    _days_inclusive = (EVENT_END - EVENT_START).days
     breakfasts = st.number_input("Počet raňajok" if lang == "SK" else "Number of breakfasts", 0, 10, _days_inclusive, key="app_breakfasts")
     lunches = st.number_input("Počet obedov" if lang == "SK" else "Number of lunches", 0, 15, _days_inclusive, key="app_lunches")
 
@@ -2020,22 +2020,22 @@ def main():
         # Mini dashboard (pekne v jednom riadku)
         m1, m2, m3 = st.columns(3)
         with m1:
-            st.metric("Prihlásení (účastníci)", stats["participants_sum"])
+            st.metric("Prihlásení / Participants", stats["participants_sum"])
         with m2:
-            st.metric("Voľné miesta", stats["remaining"])
-        with m3:
-            st.metric("Registrácie (záznamy)", stats["registrations_count"])
+            st.metric("Voľné miesta / Free places", stats["remaining"])
+        #with m3:
+            #st.metric("Registrácie (záznamy)", stats["registrations_count"])
 
         # Obsadenosť (progress)
         filled = min(stats["participants_sum"], MAX_CAPACITY)
         ratio = filled / MAX_CAPACITY if MAX_CAPACITY else 0
         st.progress(ratio)
-        st.caption(f"Kapacita: {filled}/{MAX_CAPACITY}")
+        st.caption(f"Kapacita/Capacity: {filled}/{MAX_CAPACITY}")
 
         # Top nástroje (krátky prehľad)
         if stats["top_instruments"]:
             top_txt = " • ".join([f"{k}: {v}" for k, v in stats["top_instruments"]])
-            st.caption(f"Najčastejšie nástroje: {top_txt}")
+            st.caption(f"Prehľad počtu nástrojov/Instruments overview: {top_txt}")
         else:
             st.caption("Zatiaľ nie sú žiadne prihlášky.")
 
