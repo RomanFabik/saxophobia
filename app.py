@@ -137,9 +137,9 @@ DEFAULT_LECTORS = [
 
 
 ENSEMBLE_TYPES = ["jednotlivec", "duo", "trio", "kvarteto", "kvinteto", "iné"]
-ROOM_TYPES = ["jednokapsule", "dvojkapsule", "trojlôžková", "iné"]
+ROOM_TYPES = ["jednokapsule/single capsule", "dvojkapsule/double capsule", "trojlôžková/triple", "iné/other"]
 COURSES = ["A", "P", "O"]
-INSTRUMENTS = ["soprán sax", "alt sax", "tenor sax", "barytón sax", "bas sax", "kontrabas sax"]
+INSTRUMENTS = ["sopran sax", "alt sax", "tenor sax", "baryton sax", "bas sax", "kontrabas sax"]
 
 DB_PATH = "saxophobia.db"
 
