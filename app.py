@@ -780,152 +780,171 @@ def page_application():
     st.header(txt["application_header"])
     st.write(txt["application_fill"])
 
-    with st.form("application_form"):
-        # Základné údaje
-        name = st.text_input(txt["name"])
-        email = st.text_input(txt["email"])
-        phone = st.text_input(txt["phone"])
-        age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
-        course = st.selectbox(txt["course"], options=COURSES)
-        instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
+    # -----------------------------
+    # Prihláška (BEZ st.form) – aby fungoval live update počtu ľudí
+    # -----------------------------
 
-        school_label = txt["school"] + (
-            " (napr. ZUŠ, konzervatórium)" if lang == "SK"
-            else " (e.g. music school, conservatory)"
-        )
-        school = st.text_input(school_label)
+    # Základné údaje
+    name = st.text_input(txt["name"], key="app_name")
+    email = st.text_input(txt["email"], key="app_email")
+    phone = st.text_input(txt["phone"], key="app_phone")
+    age = st.number_input(txt["age"], min_value=5, max_value=100, value=18, key="app_age")
+    course = st.selectbox(txt["course"], options=COURSES, key="app_course")
+    instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS, key="app_instrument")
 
-        year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
-        year_of_study = st.text_input(year_label)
+    school_label = txt["school"] + (
+        " (napr. ZUŠ, konzervatórium)" if lang == "SK"
+        else " (e.g. music school, conservatory)"
+    )
+    school = st.text_input(school_label, key="app_school")
 
-        # Skupina / ensemble
-        ensemble_label = (
-            "Typ (jednotlivec / duo / trio / kvarteto ...)"
-            if lang == "SK" else
-            "Type (solo / duo / trio / quartet ...)"
-        )
-        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
-        
-        people_label = (
-            "Počet ľudí v skupine (1 = jednotlivec)"
-            if lang == "SK" else
-            "Number of people in the group (1 = solo)"
-        )
-        people_count = st.number_input(people_label, 1, 10, 1)
-    
-        members_label = (
-            "Názov hudobného telesa"
-            if lang == "SK" else
-            "Name of ensemble / group"
-        )
-        member_names = st.text_input(members_label)
-        lesson_count = 0  # určí organizátor
+    year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
+    year_of_study = st.text_input(year_label, key="app_year_of_study")
 
-        # Lektori
-        conn = get_conn()
-        lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
-        lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
+    # --- Skupina / ensemble (poradie: Typ -> Počet ľudí -> Názov telesa) ---
+    AUTO_PEOPLE = {
+        "jednotlivec": 1,
+        "duo": 2,
+        "trio": 3,
+        "kvarteto": 4,
+        "kvinteto": 5,
+    }
 
-        pref_label = (
-            "Preferovaní lektori (v poradí priority)"
-            if lang == "SK" else
-            "Preferred teachers (in order of priority)"
-        )
-        preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
+    ensemble_label = (
+        "Typ (jednotlivec / duo / trio / kvarteto ...)"
+        if lang == "SK" else
+        "Type (solo / duo / trio / quartet ...)"
+    )
 
-        # Ubytovanie a strava
-        st.subheader("Ubytovanie a strava" if lang == "SK" else "Accommodation and meals")
+    people_label = (
+        "Počet ľudí v skupine (1 = jednotlivec)"
+        if lang == "SK" else
+        "Number of people in the group (1 = solo)"
+    )
 
-        wants_label = "Potrebujem ubytovanie" if lang == "SK" else "I need accommodation"
-        wants_accommodation = st.checkbox(wants_label, value=False)
+    members_label = (
+        "Názov hudobného telesa"
+        if lang == "SK" else
+        "Name of ensemble / group"
+    )
 
-        _default_arrival = EVENT_START
-        _default_departure = EVENT_END
+    # init session_state
+    st.session_state.setdefault("ensemble_type", ENSEMBLE_TYPES[0])
+    st.session_state.setdefault("people_count", 1)
+    st.session_state.setdefault("member_names", "")
 
-        arr_label = "Príchod" if lang == "SK" else "Arrival"
-        dep_label = "Odchod" if lang == "SK" else "Departure"
-        arrival_date = st.date_input(arr_label, value=_default_arrival)
-        departure_date = st.date_input(dep_label, value=_default_departure)
+    def _sync_people():
+        t = (st.session_state.get("ensemble_type") or "")
+        base = t.split("/")[0].strip().lower()
+        is_other = ("iné" in base) or ("ine" in base) or ("other" in base)
+        if (base in AUTO_PEOPLE) and (not is_other):
+            st.session_state["people_count"] = int(AUTO_PEOPLE[base])
 
-        room_label = "Typ izby" if lang == "SK" else "Room type"
-        room_type = st.selectbox(room_label, ROOM_TYPES)
+    ensemble_type = st.selectbox(
+        ensemble_label,
+        ENSEMBLE_TYPES,
+        key="ensemble_type",
+        on_change=_sync_people
+    )
 
-        _days_inclusive = (_default_departure - _default_arrival).days
+    base_type = (ensemble_type or "").split("/")[0].strip().lower()
+    is_other = ("iné" in base_type) or ("ine" in base_type) or ("other" in base_type)
+    is_auto = (base_type in AUTO_PEOPLE) and (not is_other)
 
-        bfast_label = "Počet raňajok" if lang == "SK" else "Number of breakfasts"
-        breakfasts = st.number_input(bfast_label, 0, 10, _days_inclusive)
+    people_count = st.number_input(
+        people_label,
+        min_value=1,
+        max_value=10,
+        step=1,
+        key="people_count",
+        disabled=is_auto
+    )
 
-        lunch_label = "Počet obedov" if lang == "SK" else "Number of lunches"
-        lunches = st.number_input(lunch_label, 0, 15, _days_inclusive)
+    member_names = st.text_input(members_label, key="member_names")
 
-        notes_label = (
-            "Poznámka k strave (alergie, intolerancie a pod.)"
-            if lang == "SK" else
-            "Notes on diet (allergies, intolerances, etc.)"
-        )
-        notes = st.text_area(notes_label)
+    lesson_count = 0  # určí organizátor
 
-        submit_label = txt.get(
-            "submit",
-            "Odoslať prihlášku" if lang == "SK" else "Submit application",
-        )
-        submitted = st.form_submit_button(submit_label)
+    # Lektori
+    conn = get_conn()
+    lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
+    lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
 
-        if submitted:
-            if not name or not email:
-                err = (
-                    "Meno a e-mail sú povinné."
-                    if lang == "SK" else
-                    "Name and e-mail are required."
-                )
-                st.error(err)
-            else:
-                # multiselect -> text
-                instrument_str = ", ".join(instrument) if instrument else ""
+    pref_label = (
+        "Preferovaní lektori (v poradí priority)"
+        if lang == "SK" else
+        "Preferred teachers (in order of priority)"
+    )
+    preferred_lectors = st.multiselect(pref_label, options=lectors, default=[], key="app_preferred_lectors")
 
-                cur = conn.cursor()
-                cur.execute(
-                    """
-                    INSERT INTO registrations (
-                        created_at, name, email, phone, age, course, instrument,
-                        school, year_of_study, people_count, ensemble_type, member_names,
-                        lesson_count, preferred_lectors, wants_accommodation,
-                        arrival_date, departure_date, room_type, breakfasts, lunches, notes,
-                        room_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        datetime.utcnow().isoformat(),
-                        name,
-                        email,
-                        phone,
-                        int(age),
-                        course,
-                        instrument_str,
-                        school,
-                        year_of_study,
-                        int(people_count),
-                        ensemble_type,
-                        member_names,
-                        0,
-                        to_json(preferred_lectors),
-                        1 if wants_accommodation else 0,
-                        arrival_date.isoformat(),
-                        departure_date.isoformat(),
-                        room_type,
-                        int(breakfasts),
-                        int(lunches),
-                        notes,
-                        None,  # room_code – doplní organizátor
-                    ),
-                )
-                conn.commit()
-                st.success(txt["success"])
-                st.caption(
-                    "Kópia údajov bude k dispozícii organizátorom v administrácii."
-                    if lang == "SK" else
-                    "A copy of your data will be available to the organisers in the admin interface."
-                )
+    # Ubytovanie a strava (ponechaj ako máš, len pridaj keys ak chceš)
+    st.subheader("Ubytovanie a strava" if lang == "SK" else "Accommodation and meals")
+
+    wants_label = "Potrebujem ubytovanie" if lang == "SK" else "I need accommodation"
+    wants_accommodation = st.checkbox(wants_label, value=False, key="app_wants_accommodation")
+
+    arrival_date = st.date_input("Príchod" if lang == "SK" else "Arrival", value=EVENT_START, key="app_arrival")
+    departure_date = st.date_input("Odchod" if lang == "SK" else "Departure", value=EVENT_END, key="app_departure")
+
+    room_type = st.selectbox("Typ izby" if lang == "SK" else "Room type", ROOM_TYPES, key="app_room_type")
+
+    _days_inclusive = (EVENT_END - EVENT_START).days + 1
+    breakfasts = st.number_input("Počet raňajok" if lang == "SK" else "Number of breakfasts", 0, 10, _days_inclusive, key="app_breakfasts")
+    lunches = st.number_input("Počet obedov" if lang == "SK" else "Number of lunches", 0, 15, _days_inclusive, key="app_lunches")
+
+    notes_label = (
+        "Poznámka k strave (alergie, intolerancie a pod.)"
+        if lang == "SK" else
+        "Notes on diet (allergies, intolerances, etc.)"
+    )
+    notes = st.text_area(notes_label, key="app_notes")
+
+    submit_label = txt.get("submit", "Odoslať prihlášku" if lang == "SK" else "Submit application")
+    submitted = st.button(submit_label, key="app_submit")
+
+    if submitted:
+        if not name or not email:
+            st.error("Meno a e-mail sú povinné." if lang == "SK" else "Name and e-mail are required.")
+        else:
+            instrument_str = ", ".join(instrument) if instrument else ""
+
+            cur = conn.cursor()
+            cur.execute(
+                """
+                INSERT INTO registrations (
+                    created_at, name, email, phone, age, course, instrument,
+                    school, year_of_study, people_count, ensemble_type, member_names,
+                    lesson_count, preferred_lectors, wants_accommodation,
+                    arrival_date, departure_date, room_type, breakfasts, lunches, notes,
+                    room_code
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    datetime.utcnow().isoformat(),
+                    name,
+                    email,
+                    phone,
+                    int(age),
+                    course,
+                    instrument_str,
+                    school,
+                    year_of_study,
+                    int(people_count),
+                    ensemble_type,
+                    member_names,
+                    0,
+                    to_json(preferred_lectors),
+                    1 if wants_accommodation else 0,
+                    arrival_date.isoformat(),
+                    departure_date.isoformat(),
+                    room_type,
+                    int(breakfasts),
+                    int(lunches),
+                    notes,
+                    None,
+                ),
+            )
+            conn.commit()
+            st.success(txt["success"])
 
 
 
