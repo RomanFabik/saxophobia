@@ -1037,7 +1037,7 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
     desired_cols = [
         "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
-        "price_accommodation","price_breakfasts","price_citytax","price_course","price_total",
+        "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
         "room_code",
     ]
 
@@ -1227,6 +1227,8 @@ def page_organizer():
             rate_course_A = st.number_input("A (aktívna)", min_value=0.0, value=180.0, step=10.0)
             rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=160.0, step=10.0)
             rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=0.0, step=10.0)
+            course_prices = {"A": rate_course_A, "P": rate_course_P, "O": rate_course_O}
+
 
         if st.button("Vypočítať ceny podľa sadzieb") and not df.empty:
             df_priced = compute_prices(
@@ -1257,7 +1259,7 @@ def page_organizer():
         editable_cols = [
             "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
             "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
-            "price_accommodation","price_breakfasts","price_citytax","price_course","price_total",
+            "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
             "room_code",
         ]
 
