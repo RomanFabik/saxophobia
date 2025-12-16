@@ -26,6 +26,32 @@ import json
 from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Optional, Tuple
 
+import qrcode
+from io import BytesIO
+
+def make_epc_qr_png_bytes(iban: str, name: str, amount_eur: float, bic: str = "", remittance: str = "") -> bytes:
+    # EPC QR payload (SEPA)
+    # Fields: Service Tag, Version, Character set, Identification, BIC, Name, IBAN, Amount, Purpose, Remittance, Info
+    payload = "\n".join([
+        "BCD",
+        "002",
+        "1",
+        "SCT",
+        (bic or ""),
+        (name or "")[:70],
+        (iban or "").replace(" ", ""),
+        f"EUR{amount_eur:.2f}",
+        "",
+        (remittance or "")[:140],
+        "",
+    ])
+    img = qrcode.make(payload)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue(), payload
+
+
+
 # -----------------------------
 # Jazykové texty
 # -----------------------------
@@ -1360,8 +1386,9 @@ def page_organizer():
     if df.empty:
         st.info("Žiadne prihlášky – nie je komu posielať e-mail.")
     else:
-        # Zoznam príjemcov
-        all_names_emails = df[["name", "email"]].fillna("")
+        # Zoznam príjemcov (potrebujeme aj id a price_total)
+        all_names_emails = df[["id", "name", "email", "price_total"]].fillna("")
+
         all_emails = _clean_emails(all_names_emails["email"].tolist())
 
         tabs = st.tabs(["Skupinový e-mail", "Jednotlivcom"])
@@ -1444,45 +1471,104 @@ def page_organizer():
                 key="body_ind",
             )
 
-            df_mail = all_names_emails.copy()
+            df_mail = all_names_emails[["id","name","email","price_total"]].copy()
             df_mail["send"] = False
+
             df_mail = st.data_editor(
                 df_mail,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "id": st.column_config.NumberColumn("ID", disabled=True),
                     "name": st.column_config.TextColumn("Meno", disabled=True),
                     "email": st.column_config.TextColumn("E-mail", disabled=True),
+                    "price_total": st.column_config.NumberColumn("Suma (€)", disabled=True),
                     "send": st.column_config.CheckboxColumn("Odoslať?", help="Zaškrtni pre odoslanie."),
                 },
             )
 
-            chosen_clean = _clean_emails(df_mail[df_mail["send"] == True]["email"].tolist())
+# vybrané riadky (tí, čo majú send=True)
+selected_rows = df_mail[df_mail["send"] == True].copy()
 
-            # Len dve tlačidlá pre každého vybraného príjemcu: Gmail + predvolený klient
-            if chosen_clean:
-                st.info("Otvoriť správy pre vybraných príjemcov:")
-                for rcpt in chosen_clean:
-                    col_gm, col_mt = st.columns([1, 1])
+# emaily (vyčistené)
+chosen_clean = _clean_emails(selected_rows["email"].tolist())
 
-                    with col_gm:
-                        gmail_link = (
-                            "https://mail.google.com/mail/?view=cm&fs=1&tf=1"
-                            f"&to={quote(rcpt)}"
-                            f"&su={quote(subj_ind or '')}"
-                            f"&body={quote((body_ind or '').replace('\n', '\r\n'))}"
-                        )
-                        st.link_button(f"Otvoriť v Gmaili pre {rcpt}", gmail_link)
+if not chosen_clean:
+    st.caption("Vyber aspoň jedného príjemcu v tabuľke vyššie.")
+else:
+    st.info("Individuálne platby + QR (stiahni QR a môžeš ho priložiť do mailu):")
 
-                    with col_mt:
-                        mailto_link = (
-                            f"mailto:{rcpt}?subject={quote(subj_ind or '')}"
-                            f"&body={quote((body_ind or '').replace('\n', '\r\n'))}"
-                        )
-                        st.link_button(f"Otvoriť v predvolenom klientovi pre {rcpt}", mailto_link)
-            else:
-                st.caption("Vyber aspoň jedného príjemcu v tabuľke vyššie.")
+    for _, row in selected_rows.iterrows():
+        rcpt = str(row.get("email") or "").strip()
+        if not rcpt:
+            continue
 
+        rid = int(row.get("id"))
+        person_name = str(row.get("name") or "").strip()
+
+        # POZOR: podľa tvojho df_mail je stĺpec "price_total" (nie "price_total")
+        amount = row.get("price_total")
+        try:
+            amount = float(amount) if amount not in (None, "") else 0.0
+        except Exception:
+            amount = 0.0
+
+        remittance = f"SAXO-{rid}"
+
+        qr_png, epc_payload = make_epc_qr_png_bytes(
+            iban=BANK_IBAN,
+            name=BANK_NAME,
+            amount_eur=amount,
+            bic=BANK_BIC,
+            remittance=remittance,
+        )
+
+        with st.expander(f"{person_name} – {rcpt} – suma {amount:.2f} €", expanded=True):
+            st.image(qr_png, caption="SEPA QR kód na platbu", width=220)
+            st.download_button(
+                "Stiahnuť QR (PNG)",
+                data=qr_png,
+                file_name=f"platba_SAXO-{rid}_{person_name.replace(' ','_')}.png",
+                mime="image/png",
+                key=f"dl_qr_{rid}",
+            )
+
+            st.code(
+                f"IBAN: {BANK_IBAN}\n"
+                f"SWIFT: {BANK_BIC}\n"
+                f"Príjemca: {BANK_NAME}\n"
+                f"Suma: {amount:.2f} EUR\n"
+                f"Poznámka: {remittance}",
+                language="text",
+            )
+
+            pay_text = (
+                f"Dobrý deň {person_name},\n\n"
+                f"prosíme o úhradu účastníckeho poplatku do DD.MM.YYYY na účet:\n"
+                f"IBAN: {BANK_IBAN}\n"
+                f"SWIFT: {BANK_BIC}\n"
+                f"Názov účtu: {BANK_NAME}\n"
+                f"Suma: {amount:.2f} €\n"
+                f"Poznámka: {remittance}\n\n"
+                f"Ďakujeme.\nS pozdravom\nSaxophobia tím"
+            )
+
+            col_gm, col_mt = st.columns([1, 1])
+            with col_gm:
+                gmail_link = (
+                    "https://mail.google.com/mail/?view=cm&fs=1&tf=1"
+                    f"&to={quote(rcpt)}"
+                    f"&su={quote(subj_ind or '')}"
+                    f"&body={quote(pay_text.replace('\n', '\r\n'))}"
+                )
+                st.link_button("Otvoriť v Gmaili (s platbou)", gmail_link)
+
+            with col_mt:
+                mailto_link = (
+                    f"mailto:{rcpt}?subject={quote(subj_ind or '')}"
+                    f"&body={quote(pay_text.replace('\n', '\r\n'))}"
+                )
+                st.link_button("Otvoriť v predvolenom klientovi (s platbou)", mailto_link)
 
 
     # Repertoár účastníkov – len 5 dropdown stĺpcov, hlavičky editovateľné globálne
