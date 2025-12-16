@@ -798,16 +798,8 @@ def page_application():
         year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
         year_of_study = st.text_input(year_label)
 
-        # Skupina / ensemble
+        # --- Skupina / ensemble (MIMO form, aby fungoval live update) ---
 
-        ensemble_label = (
-            "Typ (jednotlivec / duo / trio / kvarteto ...)"
-            if lang == "SK" else
-            "Type (solo / duo / trio / quartet ...)"
-        )
-        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES, key="ensemble_type")
-
-        # mapovanie typ -> počet ľudí
         AUTO_PEOPLE = {
             "jednotlivec": 1,
             "duo": 2,
@@ -816,39 +808,54 @@ def page_application():
             "kvinteto": 5,
         }
 
+        ensemble_label = (
+            "Typ (jednotlivec / duo / trio / kvarteto ...)"
+            if lang == "SK" else
+            "Type (solo / duo / trio / quartet ...)"
+        )
+
         people_label = (
             "Počet ľudí v skupine (1 = jednotlivec)"
             if lang == "SK" else
             "Number of people in the group (1 = solo)"
         )
 
-        # auto počet pre známe typy, manuálne len pre "iné"
-        if ensemble_type in AUTO_PEOPLE:
-            people_count = st.number_input(
-                people_label,
-                min_value=1,
-                max_value=10,
-                value=int(AUTO_PEOPLE[ensemble_type]),
-                disabled=True,          # read-only
-                key="people_count_auto"
-            )
-        else:
-            people_count = st.number_input(
-                people_label,
-                min_value=1,
-                max_value=10,
-                value=1,
-                step=1,
-                disabled=False,         # editovateľné iba pri "iné"
-                key="people_count_manual"
-            )
-
         members_label = (
             "Názov hudobného telesa"
             if lang == "SK" else
             "Name of ensemble / group"
         )
-        member_names = st.text_input(members_label)
+
+        # init
+        if "ensemble_type" not in st.session_state:
+            st.session_state["ensemble_type"] = ENSEMBLE_TYPES[0]
+        if "people_count" not in st.session_state:
+            st.session_state["people_count"] = 1
+
+        def _sync_people():
+            t = st.session_state["ensemble_type"]
+            if t in AUTO_PEOPLE:
+                st.session_state["people_count"] = AUTO_PEOPLE[t]
+
+        ensemble_type = st.selectbox(
+            ensemble_label,
+            ENSEMBLE_TYPES,
+            key="ensemble_type",
+            on_change=_sync_people
+        )
+
+        is_auto = ensemble_type in AUTO_PEOPLE
+        people_count = st.number_input(
+            people_label,
+            min_value=1,
+            max_value=10,
+            step=1,
+            key="people_count",
+            disabled=is_auto
+        )
+
+        member_names = st.text_input(members_label, key="member_names")
+
 
 
         # Lektori
