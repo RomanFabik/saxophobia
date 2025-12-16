@@ -799,20 +799,20 @@ def page_application():
         year_of_study = st.text_input(year_label)
 
         # Skupina / ensemble
-        people_label = (
-            "Počet ľudí v skupine (1 = jednotlivec)"
-            if lang == "SK" else
-            "Number of people in the group (1 = solo)"
-        )
-        people_count = st.number_input(people_label, 1, 10, 1)
-
         ensemble_label = (
             "Typ (jednotlivec / duo / trio / kvarteto ...)"
             if lang == "SK" else
             "Type (solo / duo / trio / quartet ...)"
         )
         ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
-
+        
+        people_label = (
+            "Počet ľudí v skupine (1 = jednotlivec)"
+            if lang == "SK" else
+            "Number of people in the group (1 = solo)"
+        )
+        people_count = st.number_input(people_label, 1, 10, 1)
+    
         members_label = (
             "Názov hudobného telesa"
             if lang == "SK" else
