@@ -799,27 +799,57 @@ def page_application():
         year_of_study = st.text_input(year_label)
 
         # Skupina / ensemble
+
         ensemble_label = (
             "Typ (jednotlivec / duo / trio / kvarteto ...)"
             if lang == "SK" else
             "Type (solo / duo / trio / quartet ...)"
         )
-        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES)
-        
+        ensemble_type = st.selectbox(ensemble_label, ENSEMBLE_TYPES, key="ensemble_type")
+
+        # mapovanie typ -> počet ľudí
+        AUTO_PEOPLE = {
+            "jednotlivec": 1,
+            "duo": 2,
+            "trio": 3,
+            "kvarteto": 4,
+            "kvinteto": 5,
+        }
+
         people_label = (
             "Počet ľudí v skupine (1 = jednotlivec)"
             if lang == "SK" else
             "Number of people in the group (1 = solo)"
         )
-        people_count = st.number_input(people_label, 1, 10, 1)
-    
+
+        # auto počet pre známe typy, manuálne len pre "iné"
+        if ensemble_type in AUTO_PEOPLE:
+            people_count = st.number_input(
+                people_label,
+                min_value=1,
+                max_value=10,
+                value=int(AUTO_PEOPLE[ensemble_type]),
+                disabled=True,          # read-only
+                key="people_count_auto"
+            )
+        else:
+            people_count = st.number_input(
+                people_label,
+                min_value=1,
+                max_value=10,
+                value=1,
+                step=1,
+                disabled=False,         # editovateľné iba pri "iné"
+                key="people_count_manual"
+            )
+
         members_label = (
             "Názov hudobného telesa"
             if lang == "SK" else
             "Name of ensemble / group"
         )
         member_names = st.text_input(members_label)
-        lesson_count = 0  # určí organizátor
+
 
         # Lektori
         conn = get_conn()
