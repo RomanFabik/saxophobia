@@ -780,28 +780,17 @@ def page_application():
     st.header(txt["application_header"])
     st.write(txt["application_fill"])
 
-    with st.form("application_form"):
-        # Základné údaje
-        name = st.text_input(txt["name"])
-        email = st.text_input(txt["email"])
-        phone = st.text_input(txt["phone"])
-        age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
-        course = st.selectbox(txt["course"], options=COURSES)
-        instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
+def page_application():
+    lang = st.session_state.get("lang", "SK")
+    txt = TEXTS.get(lang, TEXTS["SK"])
 
-        school_label = txt["school"] + (
-            " (napr. ZUŠ, konzervatórium)" if lang == "SK"
-            else " (e.g. music school, conservatory)"
-        )
-        school = st.text_input(school_label)
+    st.header(txt["application_header"])
+    st.write(txt["application_fill"])
 
-        year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
-        year_of_study = st.text_input(year_label)
-
-        # -----------------------------
-# Skupina / ensemble (MIMO form – aby fungoval live update)
-# Poradie: Typ → Počet ľudí → Názov telesa
-# -----------------------------
+    # -----------------------------
+    # Skupina / ensemble (MIMO form – live update funguje)
+    # Poradie: Typ → Počet ľudí → Názov telesa
+    # -----------------------------
     AUTO_PEOPLE = {
         "jednotlivec": 1,
         "duo": 2,
@@ -826,23 +815,18 @@ def page_application():
         "Name of ensemble / group"
     )
 
-    # init session_state (aby sa to správalo stabilne)
     st.session_state.setdefault("ensemble_type", ENSEMBLE_TYPES[0])
     st.session_state.setdefault("people_count", 1)
     st.session_state.setdefault("member_names", "")
 
-    # 1) Typ
     ensemble_type = st.selectbox(
         ensemble_label,
         ENSEMBLE_TYPES,
         key="ensemble_type",
     )
 
-    # normalizácia (máš hodnoty typu "jednotlivec/individual")
     base_type = (ensemble_type or "").split("/")[0].strip().lower()
-
-    # 2) Počet ľudí (auto pre známe typy, manuálne iba pri "iné/other")
-    is_other = "iné" in base_type  # pokryje "iné/other"
+    is_other = "iné" in base_type
     is_auto = (base_type in AUTO_PEOPLE) and (not is_other)
 
     if is_auto:
@@ -854,11 +838,52 @@ def page_application():
         max_value=10,
         step=1,
         key="people_count",
-        disabled=is_auto,  # read-only pri auto typoch
+        disabled=is_auto,
     )
 
-    # 3) Názov telesa
     member_names = st.text_input(members_label, key="member_names")
+
+    # -----------------------------
+    # Zvyšok ide do FORM (submit)
+    # -----------------------------
+    with st.form("application_form"):
+        # Základné údaje
+        name = st.text_input(txt["name"])
+        email = st.text_input(txt["email"])
+        phone = st.text_input(txt["phone"])
+        age = st.number_input(txt["age"], min_value=5, max_value=100, value=18)
+        course = st.selectbox(txt["course"], options=COURSES)
+        instrument = st.multiselect(txt["instrument"], options=INSTRUMENTS)
+
+        school_label = txt["school"] + (
+            " (napr. ZUŠ, konzervatórium)" if lang == "SK"
+            else " (e.g. music school, conservatory)"
+        )
+        school = st.text_input(school_label)
+
+        year_label = "Ročník štúdia" if lang == "SK" else "Year of study"
+        year_of_study = st.text_input(year_label)
+
+        # Lektori
+        conn = get_conn()
+        lectors_df = pd.read_sql_query("SELECT name FROM lectors ORDER BY name", conn)
+        lectors = lectors_df["name"].tolist() or DEFAULT_LECTORS
+
+        pref_label = (
+            "Preferovaní lektori (v poradí priority)"
+            if lang == "SK" else
+            "Preferred teachers (in order of priority)"
+        )
+        preferred_lectors = st.multiselect(pref_label, options=lectors, default=[])
+
+        submitted = st.form_submit_button(txt["submit"])
+
+        if submitted:
+            # tu potom pri INSERT použiješ:
+            # people_count = int(st.session_state["people_count"])
+            # ensemble_type = st.session_state["ensemble_type"]
+            # member_names = st.session_state["member_names"]
+            pass
 
 
         # Lektori
