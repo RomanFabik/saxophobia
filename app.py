@@ -723,6 +723,51 @@ def time_range(start: time, end: time, step_min: int) -> List[Tuple[time, time]]
         out.append((cur.time(), nxt.time()))
         cur = nxt
     return out
+MAX_CAPACITY = 100
+
+def _parse_instruments(instr_str: str) -> list[str]:
+    if not instr_str:
+        return []
+    return [x.strip() for x in str(instr_str).split(",") if x.strip()]
+
+def get_public_dashboard_stats(conn) -> dict:
+    """
+    Vracia štatistiky pre horný dashboard:
+    - registrations_count = počet riadkov
+    - participants_sum = suma people_count (ak chýba -> 1)
+    - remaining = MAX_CAPACITY - participants_sum (min 0)
+    - top_instruments = list[(instrument, count)]
+    """
+    df = pd.read_sql_query("SELECT people_count, instrument FROM registrations", conn)
+
+    if df.empty:
+        return {
+            "registrations_count": 0,
+            "participants_sum": 0,
+            "remaining": MAX_CAPACITY,
+            "top_instruments": [],
+        }
+
+    # people_count: ak je prázdne -> 1
+    df["people_count"] = pd.to_numeric(df["people_count"], errors="coerce").fillna(1).astype(int)
+    participants_sum = int(df["people_count"].sum())
+
+    # instrument: rozparsovať multiselect string "alt sax, tenor sax"
+    counts = {}
+    for s in df["instrument"].fillna("").tolist():
+        for inst in _parse_instruments(s):
+            counts[inst] = counts.get(inst, 0) + 1
+
+    top = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:6]
+
+    remaining = max(0, MAX_CAPACITY - participants_sum)
+
+    return {
+        "registrations_count": int(len(df)),
+        "participants_sum": participants_sum,
+        "remaining": remaining,
+        "top_instruments": top,
+    }
 
 
 # -----------------------------
@@ -1958,13 +2003,41 @@ def main():
     # -----------------------------
     # TOP BAR (logo + jazyk + menu)
     # -----------------------------
-    col_logo, col_title, col_lang = st.columns([1, 3, 1])
+        # -----------------------------
+    # TOP BAR (logo + jazyk + dashboard)
+    # -----------------------------
+    conn = get_conn()
+    stats = get_public_dashboard_stats(conn)
+
+    col_logo, col_mid, col_lang = st.columns([1.2, 3.2, 1.2])
 
     with col_logo:
         st.image("Logo.jpg", use_container_width=True)
 
-    with col_title:
+    with col_mid:
         st.markdown("## Saxophobia")
+
+        # Mini dashboard (pekne v jednom riadku)
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.metric("Prihlásení (účastníci)", stats["participants_sum"])
+        with m2:
+            st.metric("Voľné miesta", stats["remaining"])
+        with m3:
+            st.metric("Registrácie (záznamy)", stats["registrations_count"])
+
+        # Obsadenosť (progress)
+        filled = min(stats["participants_sum"], MAX_CAPACITY)
+        ratio = filled / MAX_CAPACITY if MAX_CAPACITY else 0
+        st.progress(ratio)
+        st.caption(f"Kapacita: {filled}/{MAX_CAPACITY}")
+
+        # Top nástroje (krátky prehľad)
+        if stats["top_instruments"]:
+            top_txt = " • ".join([f"{k}: {v}" for k, v in stats["top_instruments"]])
+            st.caption(f"Najčastejšie nástroje: {top_txt}")
+        else:
+            st.caption("Zatiaľ nie sú žiadne prihlášky.")
 
     with col_lang:
         st.markdown(f"**{txt['lang_label']}**")
@@ -1975,6 +2048,7 @@ def main():
             key="lang",
             index=0 if current_lang == "SK" else 1,
         )
+
 
     # Po zmene jazyka refresh
     txt = TEXTS.get(lang, TEXTS["SK"])
