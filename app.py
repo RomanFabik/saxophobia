@@ -14,6 +14,16 @@ def hide_streamlit_menu():
     """
     st.markdown(hide_menu_style, unsafe_allow_html=True)
 
+st.set_page_config(
+    page_title="Saxophobia – registrácia",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        "Get help": None,
+        "Report a Bug": None,
+        "About": None,
+    },
+)
 
 from urllib.parse import quote
 import html
