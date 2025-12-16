@@ -1955,35 +1955,101 @@ def main():
     current_lang = st.session_state.get("lang", "SK")
     txt = TEXTS.get(current_lang, TEXTS["SK"])
 
-    # Sidebar – logo a názov
-    st.sidebar.image("Logo.jpg", use_column_width=True)
-    st.sidebar.markdown("### Saxophobia")
+    # -----------------------------
+    # TOP BAR (logo + jazyk + menu)
+    # -----------------------------
+    col_logo, col_title, col_lang = st.columns([1, 3, 1])
 
-    # Prepínač jazyka
-    st.sidebar.markdown(f"**{txt['lang_label']}**")
-    lang = st.sidebar.radio(
-        "",
-        ["SK", "EN"],
-        horizontal=True,
-        key="lang",
-        index=0 if current_lang == "SK" else 1,
-    )
+    with col_logo:
+        st.image("Logo.jpg", use_container_width=True)
 
-    # Po zmene jazyka refreshneme texty
+    with col_title:
+        st.markdown("## Saxophobia")
+
+    with col_lang:
+        st.markdown(f"**{txt['lang_label']}**")
+        lang = st.radio(
+            "",
+            ["SK", "EN"],
+            horizontal=True,
+            key="lang",
+            index=0 if current_lang == "SK" else 1,
+        )
+
+    # Po zmene jazyka refresh
     txt = TEXTS.get(lang, TEXTS["SK"])
 
-    # Navigácia podľa jazyka
-    page = st.sidebar.radio(
+    # Dynamické menu podľa prihlásenia
+    menu_items = [txt["nav_application"], txt["nav_feedback"]]
+
+    # organizer vidí Organizátor
+    if st.session_state.get("auth_organizer_ok"):
+        if txt["nav_organizer"] not in menu_items:
+            menu_items.insert(1, txt["nav_organizer"])
+
+    # admin vidí Admin (a aj Organizátor)
+    if st.session_state.get("auth_admin_ok"):
+        if txt["nav_organizer"] not in menu_items:
+            menu_items.insert(1, txt["nav_organizer"])
+        if txt["nav_admin"] not in menu_items:
+            menu_items.insert(2, txt["nav_admin"])
+
+    page = st.radio(
         txt["nav_label"],
-        [
-            txt["nav_application"],
-            txt["nav_organizer"],
-            txt["nav_admin"],
-            txt["nav_feedback"],
-        ],
+        menu_items,
+        horizontal=True,
+        key="top_nav",
     )
 
+    st.divider()
+
+    # -----------------------------
+    # Prihlásenie / Odhlásenie (hore)
+    # -----------------------------
+    with st.expander("Prihlásenie (organizátor/admin)"):
+        c1, c2 = st.columns(2)
+
+        # Organizer
+        with c1:
+            if not st.session_state.get("auth_organizer_ok"):
+                org_pwd = st.text_input("Heslo organizátor", type="password", key="top_pwd_organizer")
+                if st.button("Prihlásiť ako organizátor", key="top_login_organizer"):
+                    organizer_pw = get_secret("auth.organizer_password", "organizator123")
+                    if org_pwd == organizer_pw:
+                        st.session_state["auth_organizer_ok"] = True
+                        st.success("OK – organizátor prihlásený.")
+                        st.rerun()
+                    else:
+                        st.error("Nesprávne heslo organizátora.")
+            else:
+                st.success("Organizátor prihlásený ✅")
+
+        # Admin
+        with c2:
+            if not st.session_state.get("auth_admin_ok"):
+                adm_pwd = st.text_input("Heslo admin", type="password", key="top_pwd_admin")
+                if st.button("Prihlásiť ako admin", key="top_login_admin"):
+                    admin_pw = get_secret("auth.admin_password", "admin123")
+                    if adm_pwd == admin_pw:
+                        st.session_state["auth_admin_ok"] = True
+                        st.success("OK – admin prihlásený.")
+                        st.rerun()
+                    else:
+                        st.error("Nesprávne heslo admina.")
+            else:
+                st.success("Admin prihlásený ✅")
+
+        if st.button("Odhlásiť (admin/organizátor)", key="top_logout"):
+            for k in ["auth_organizer_ok", "auth_admin_ok"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
+
+    st.divider()
+
+    # -----------------------------
     # Router na stránky
+    # -----------------------------
     if page == txt["nav_application"]:
         page_application()
     elif page == txt["nav_organizer"]:
