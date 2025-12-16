@@ -1184,37 +1184,37 @@ def page_organizer():
     conn = get_conn()
     df = pd.read_sql_query("SELECT * FROM registrations ORDER BY created_at DESC", conn)
 
-# Sadzby (nastaviteľné organizátorom)
-with st.expander("Sadzby a hromadný výpočet cien"):
-    colA, colB, colC, colD, colE = st.columns(5)
+    # Sadzby (nastaviteľné organizátorom)
+    with st.expander("Sadzby a hromadný výpočet cien"):
+        colA, colB, colC, colD, colE = st.columns(5)
 
-    with colA:
-        rate_night = st.number_input("Cena za noc (€)", min_value=0.0, value=36.0, step=1.0)
-    with colB:
-        rate_breakfast = st.number_input("Cena raňajok (€) / ks", min_value=0.0, value=3.0, step=0.5)
-    with colC:
-        rate_lunch = st.number_input("Cena obeda (€) / ks", min_value=0.0, value=10.5, step=0.5)  # ✅ NOVÉ
-    with colD:
-        rate_citytax = st.number_input("Mestská daň (€) / osoba / noc", min_value=0.0, value=3.5, step=0.5)
-    with colE:
-        st.markdown("**Kurz (€)**")
-        rate_course_A = st.number_input("A (aktívna)", min_value=0.0, value=180.0, step=10.0)
-        rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=160.0, step=10.0)
-        rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=0.0, step=10.0)
+        with colA:
+            rate_night = st.number_input("Cena za noc (€)", min_value=0.0, value=36.0, step=1.0)
+        with colB:
+            rate_breakfast = st.number_input("Cena raňajok (€) / ks", min_value=0.0, value=3.0, step=0.5)
+        with colC:
+            rate_lunch = st.number_input("Cena obeda (€) / ks", min_value=0.0, value=10.5, step=0.5)  # ✅ NOVÉ
+        with colD:
+            rate_citytax = st.number_input("Mestská daň (€) / osoba / noc", min_value=0.0, value=3.5, step=0.5)
+        with colE:
+            st.markdown("**Kurz (€)**")
+            rate_course_A = st.number_input("A (aktívna)", min_value=0.0, value=180.0, step=10.0)
+            rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=160.0, step=10.0)
+            rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=0.0, step=10.0)
 
-    if st.button("Vypočítať ceny podľa sadzieb") and not df.empty:
-        course_prices = {"A": rate_course_A, "P": rate_course_P, "O": rate_course_O}
+        if st.button("Vypočítať ceny podľa sadzieb") and not df.empty:
+            course_prices = {"A": rate_course_A, "P": rate_course_P, "O": rate_course_O}
 
-        df_priced = compute_prices(
-            df,
-            rate_night=rate_night,
-            rate_breakfast=rate_breakfast,
-            rate_lunch=rate_lunch,          # ✅ NOVÉ
-            rate_citytax=rate_citytax,
-            course_prices=course_prices,    # ✅ NOVÉ
-        )
-        persist_prices(conn, df_priced)
-        df = pd.read_sql_query("SELECT * FROM registrations ORDER BY created_at DESC", conn)
+            df_priced = compute_prices(
+                df,
+                rate_night=rate_night,
+                rate_breakfast=rate_breakfast,
+                rate_lunch=rate_lunch,          # ✅ NOVÉ
+                rate_citytax=rate_citytax,
+                course_prices=course_prices,    # ✅ NOVÉ
+            )
+            persist_prices(conn, df_priced)
+            df = pd.read_sql_query("SELECT * FROM registrations ORDER BY created_at DESC", conn)
 
     # Parsovanie preferovaných lektorov pre zobrazenie
     if not df.empty:
