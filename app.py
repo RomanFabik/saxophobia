@@ -860,7 +860,14 @@ def page_application():
         disabled=is_auto
     )
 
-    member_names = st.text_input(members_label, key="member_names")
+    # jednotlivec = pole read-only, skupina = editovateľné
+    is_solo = base_type == "jednotlivec"
+
+    member_names = st.text_input(
+        members_label,
+        key="member_names",
+        disabled=is_solo
+    )
 
     lesson_count = 0  # určí organizátor
 
