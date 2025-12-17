@@ -3,17 +3,6 @@
 """
 Saxophobia – registrácia účastníkov + plánovanie lekcií (MVP)
 """
-def hide_streamlit_menu():
-    hide_menu_style = """
-        <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-            .stActionButton {visibility: hidden;}
-        </style>
-    """
-    st.markdown(hide_menu_style, unsafe_allow_html=True)
-
 
 from urllib.parse import quote
 import html
@@ -2046,7 +2035,7 @@ def main():
     # -----------------------------
     # TOP BAR (logo + jazyk + menu)
     # -----------------------------
-        # -----------------------------
+    # -----------------------------
     # TOP BAR (logo + jazyk + dashboard)
     # -----------------------------
     conn = get_conn()
@@ -2120,6 +2109,17 @@ def main():
 
     st.divider()
 
+
+    def hide_streamlit_menu():
+    hide_menu_style = """
+        <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            .stActionButton {visibility: hidden;}
+        </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
     # -----------------------------
     # Prihlásenie / Odhlásenie (hore)
     # -----------------------------
