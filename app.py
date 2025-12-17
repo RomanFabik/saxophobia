@@ -1359,7 +1359,7 @@ def page_organizer():
     if not df.empty:
         capacity_overview(df)
 
-    st.subheader("💳 QR platba (SEPA)")
+st.subheader("💳 QR platba (SEPA)")
 
 PAYEE_NAME = "Saxophobia"  # názov príjemcu (organizátor)
 PAYEE_IBAN = get_secret("payment.iban", "")
