@@ -479,10 +479,12 @@ def save_email_template(conn: sqlite3.Connection, tid: int, name: str, subject: 
     conn.commit()
 
 
+@st.cache_resource
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 
 def ensure_price_columns(conn: sqlite3.Connection):
