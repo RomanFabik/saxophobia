@@ -494,7 +494,6 @@ def ensure_price_columns(conn: sqlite3.Connection):
             pass
     add("price_accommodation REAL")
     add("price_breakfasts REAL")
-    add("price_lunches REAL")
     add("price_citytax REAL")
     add("price_course REAL")
     add("price_total REAL")
@@ -775,66 +774,41 @@ def get_public_dashboard_stats(conn) -> dict:
 # Ceny – výpočet / persist
 # -----------------------------
 
-def compute_prices(
-    df: pd.DataFrame,
-    rate_night: float,
-    rate_breakfast: float,
-    rate_lunch: float,
-    rate_citytax: float,
-    course_prices: dict,
-    rate_course_default: float = 0.0,
-) -> pd.DataFrame:
+def compute_prices(df: pd.DataFrame, rate_night: float, rate_breakfast: float, rate_citytax: float, rate_course_default: float) -> pd.DataFrame:
     def nights(row):
         try:
-            a = row.get("arrival_date")
-            d = row.get("departure_date")
-            if a and d and str(a) != "" and str(d) != "":
-                a = pd.to_datetime(a).date()
-                d = pd.to_datetime(d).date()
+            if row.get("arrival_date") and row.get("departure_date") and str(row["arrival_date"]) != "" and str(row["departure_date"]) != "":
+                a = pd.to_datetime(row["arrival_date"]).date()
+                d = pd.to_datetime(row["departure_date"]).date()
                 return max(0, (d - a).days)
         except Exception:
             return 0
         return 0
-
     df = df.copy()
-
-    # základ
     n = df.apply(nights, axis=1)
+    ppl = df.get("people_count", pd.Series([1]*len(df)))
+    bfast = df.get("breakfasts", pd.Series([0]*len(df)))
 
-    ppl = pd.to_numeric(df.get("people_count", 1), errors="coerce").fillna(1).astype(int)
-    bfast = pd.to_numeric(df.get("breakfasts", 0), errors="coerce").fillna(0).astype(int)
-    lunch = pd.to_numeric(df.get("lunches", 0), errors="coerce").fillna(0).astype(int)
-
-    df["price_accommodation"] = n * float(rate_night)
-    df["price_breakfasts"] = bfast * float(rate_breakfast)
-    df["price_lunches"] = lunch * float(rate_lunch)
-    df["price_citytax"] = n * ppl * float(rate_citytax)
-
-    # kurz podľa A/P/O
-    def _course_price(x):
-        c = (str(x or "")).strip().upper()
-        if c in course_prices:
-            return float(course_prices[c])
-        return float(rate_course_default)
-
-    df["price_course"] = df.get("course", "").apply(_course_price)
-
-    df["price_total"] = df[
-        ["price_accommodation", "price_breakfasts", "price_lunches", "price_citytax", "price_course"]
-    ].sum(axis=1)
-
+    df["price_accommodation"] = n * rate_night
+    df["price_breakfasts"] = bfast * rate_breakfast
+    df["price_citytax"] = n * ppl * rate_citytax
+    if "price_course" not in df.columns:
+        df["price_course"] = rate_course_default
+    df["price_course"] = df["price_course"].fillna(rate_course_default)
+    df["price_total"] = df[["price_accommodation","price_breakfasts","price_citytax","price_course"]].sum(axis=1)
     return df
 
 
 def persist_prices(conn: sqlite3.Connection, priced_df: pd.DataFrame):
-    cols = ["price_accommodation","price_breakfasts","price_lunches","price_citytax","price_course","price_total"]
+    """Zapíše price_* stĺpce späť do DB podľa ID (hromadne)."""
+    cols = ["price_accommodation","price_breakfasts","price_citytax","price_course","price_total"]
     cur = conn.cursor()
     for _, r in priced_df.iterrows():
         if "id" not in r or pd.isna(r["id"]):
             continue
         values = [r.get(c) for c in cols]
         cur.execute(
-            "UPDATE registrations SET price_accommodation=?, price_breakfasts=?, price_lunches=?, price_citytax=?, price_course=?, price_total=? WHERE id=?",
+            "UPDATE registrations SET price_accommodation=?, price_breakfasts=?, price_citytax=?, price_course=?, price_total=? WHERE id=?",
             values + [int(r["id"])],
         )
     conn.commit()
@@ -1037,7 +1011,7 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
     desired_cols = [
         "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
-        "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
+        "price_accommodation","price_breakfasts","price_citytax","price_course","price_total",
         "room_code",
     ]
 
@@ -1212,37 +1186,20 @@ def page_organizer():
 
     # Sadzby (nastaviteľné organizátorom)
     with st.expander("Sadzby a hromadný výpočet cien"):
-        colA, colB, colC, colD, colE = st.columns(5)
-
+        colA, colB, colC, colD = st.columns(4)
         with colA:
             rate_night = st.number_input("Cena za noc (€)", min_value=0.0, value=36.0, step=1.0)
         with colB:
             rate_breakfast = st.number_input("Cena raňajok (€) / ks", min_value=0.0, value=3.0, step=0.5)
         with colC:
-            rate_lunch = st.number_input("Cena obeda (€) / ks", min_value=0.0, value=10.5, step=0.5)  # ✅ NOVÉ
-        with colD:
             rate_citytax = st.number_input("Mestská daň (€) / osoba / noc", min_value=0.0, value=3.5, step=0.5)
-        with colE:
-            st.markdown("**Kurz (€)**")
-            rate_course_A = st.number_input("A (aktívna)", min_value=0.0, value=180.0, step=10.0)
-            rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=160.0, step=10.0)
-            rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=0.0, step=10.0)
-            course_prices = {"A": rate_course_A, "P": rate_course_P, "O": rate_course_O}
-
+        with colD:
+            rate_course_default = st.number_input("Poplatok za kurz – predvolené (€)", min_value=0.0, value=160.0, step=10.0)
 
         if st.button("Vypočítať ceny podľa sadzieb") and not df.empty:
-            df_priced = compute_prices(
-                df,
-                rate_night=rate_night,
-                rate_breakfast=rate_breakfast,
-                rate_lunch=rate_lunch,
-                rate_citytax=rate_citytax,
-                course_prices=course_prices,
-                rate_course_default=0.0,
-            )
+            df_priced = compute_prices(df, rate_night, rate_breakfast, rate_citytax, rate_course_default)
             persist_prices(conn, df_priced)
             df = pd.read_sql_query("SELECT * FROM registrations ORDER BY created_at DESC", conn)
-
 
     # Parsovanie preferovaných lektorov pre zobrazenie
     if not df.empty:
@@ -1259,7 +1216,7 @@ def page_organizer():
         editable_cols = [
             "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
             "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
-            "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
+            "price_accommodation","price_breakfasts","price_citytax","price_course","price_total",
             "room_code",
         ]
 
