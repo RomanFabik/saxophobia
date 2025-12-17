@@ -786,6 +786,7 @@ def compute_prices(
     course_prices: dict,
     rate_course_default: float = 0.0,
 ) -> pd.DataFrame:
+
     def nights(row):
         try:
             a = row.get("arrival_date")
@@ -800,19 +801,24 @@ def compute_prices(
 
     df = df.copy()
 
-    # základ
-    n = df.apply(nights, axis=1)
-
     ppl = pd.to_numeric(df.get("people_count", 1), errors="coerce").fillna(1).astype(int)
+
+    wants = pd.to_numeric(df.get("wants_accommodation", 0), errors="coerce").fillna(0).astype(int)
+    has_acc = wants == 1
+
+    n = df.apply(nights, axis=1)
+    n = n.where(has_acc, 0)  # ✅ ak nechce ubytovanie, noci = 0
+
     bfast = pd.to_numeric(df.get("breakfasts", 0), errors="coerce").fillna(0).astype(int)
-    lunch = pd.to_numeric(df.get("lunches", 0), errors="coerce").fillna(0).astype(int)
+    bfast = bfast.where(has_acc, 0)  # ✅ raňajky len pri ubytovaní
+
+    lunch = pd.to_numeric(df.get("lunches", 0), errors="coerce").fillna(0).astype(int)  # obedy môžu byť aj bez ubytovania
 
     df["price_accommodation"] = n * float(rate_night)
     df["price_breakfasts"] = bfast * float(rate_breakfast)
     df["price_lunches"] = lunch * float(rate_lunch)
-    df["price_citytax"] = n * ppl * float(rate_citytax)
+    df["price_citytax"] = (n * ppl * float(rate_citytax)).where(has_acc, 0)  # ✅ city tax len pri ubytovaní
 
-    # kurz podľa A/P/O
     def _course_price(x):
         c = (str(x or "")).strip().upper()
         if c in course_prices:
@@ -826,6 +832,7 @@ def compute_prices(
     ].sum(axis=1)
 
     return df
+
 
 
 def persist_prices(conn: sqlite3.Connection, priced_df: pd.DataFrame):
