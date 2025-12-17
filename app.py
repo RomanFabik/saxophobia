@@ -3,6 +3,17 @@
 """
 Saxophobia – registrácia účastníkov + plánovanie lekcií (MVP)
 """
+def hide_streamlit_menu():
+    hide_menu_style = """
+        <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            .stActionButton {visibility: hidden;}
+        </style>
+    """
+    st.markdown(hide_menu_style, unsafe_allow_html=True)
+
 
 from urllib.parse import quote
 import html
@@ -758,16 +769,6 @@ def get_public_dashboard_stats(conn) -> dict:
         "remaining": remaining,
         "top_instruments": top,
     }
-def hide_streamlit_menu():
-    hide_menu_style = """
-        <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-            .stActionButton {visibility: hidden;}
-        </style>
-    """
-    st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 
 # -----------------------------
@@ -2031,6 +2032,13 @@ def build_matrix_like_excel(conn: sqlite3.Connection) -> pd.DataFrame:
 # UI – navigácia
 # -----------------------------
 
+hide_streamlit_menu()
+
+
+def main():
+    st.set_page_config(page_title="Saxophobia – registrácia", layout="wide")
+    init_db()
+
     # Aktuálny jazyk zo session (default SK)
     current_lang = st.session_state.get("lang", "SK")
     txt = TEXTS.get(current_lang, TEXTS["SK"])
@@ -2038,7 +2046,7 @@ def build_matrix_like_excel(conn: sqlite3.Connection) -> pd.DataFrame:
     # -----------------------------
     # TOP BAR (logo + jazyk + menu)
     # -----------------------------
-    # -----------------------------
+        # -----------------------------
     # TOP BAR (logo + jazyk + dashboard)
     # -----------------------------
     conn = get_conn()
@@ -2112,7 +2120,6 @@ def build_matrix_like_excel(conn: sqlite3.Connection) -> pd.DataFrame:
 
     st.divider()
 
-    st.markdown(hide_menu_style, unsafe_allow_html=True)
     # -----------------------------
     # Prihlásenie / Odhlásenie (hore)
     # -----------------------------
