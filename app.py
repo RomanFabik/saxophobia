@@ -2057,7 +2057,7 @@ def main():
     col_logo, col_mid, col_lang = st.columns([1.2, 3.2, 1.2])
 
     with col_logo:
-        st.image("Logo.jpg", use_container_width=True)
+        st.image("Logo.jpg", width='stretch')
 
     with col_mid:
         st.markdown("## Saxophobia")
@@ -2087,12 +2087,14 @@ def main():
     with col_lang:
         st.markdown(f"**{txt['lang_label']}**")
         lang = st.radio(
-            "",
+            "Language",
             ["SK", "EN"],
             horizontal=True,
             key="lang",
             index=0 if current_lang == "SK" else 1,
+            label_visibility="collapsed",
         )
+
 
 
     # Po zmene jazyka refresh
