@@ -1234,8 +1234,8 @@ def page_organizer():
         with colE:
             st.markdown("**Kurz (€)**")
             rate_course_A = st.number_input("A (aktívna)", min_value=0.0, value=180.0, step=10.0)
-            rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=160.0, step=10.0)
-            rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=0.0, step=10.0)
+            rate_course_P = st.number_input("P (pasívna)", min_value=0.0, value=100.0, step=10.0)
+            rate_course_O = st.number_input("O (orchester)", min_value=0.0, value=20.0, step=10.0)
             course_prices = {"A": rate_course_A, "P": rate_course_P, "O": rate_course_O}
 
 
