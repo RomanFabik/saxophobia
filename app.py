@@ -671,7 +671,12 @@ def get_secret(path: str, default: Optional[str] = None) -> Optional[str]:
         return ref
     except Exception:
         return default
-
+# =========================
+# PLATOBNÉ ÚDAJE (QR SEPA)
+# =========================
+PAYEE_NAME = "Saxophobia"
+PAYEE_IBAN = get_secret("payment.iban", "")
+PAYEE_BIC  = get_secret("payment.bic", "")
 
 def login(role: str) -> bool:
     """Vráti True, ak je používateľ prihlásený pre danú rolu."""
@@ -1358,50 +1363,45 @@ def page_organizer():
     # Kapacitné plnenie – prehľad (používa plné df)
     if not df.empty:
         capacity_overview(df)
-
-st.subheader("💳 QR platba (SEPA)")
-
-PAYEE_NAME = "Saxophobia"  # názov príjemcu (organizátor)
-PAYEE_IBAN = get_secret("payment.iban", "")
-PAYEE_BIC  = get_secret("payment.bic", "")
-
-if not PAYEE_IBAN:
-    st.warning("Doplň IBAN do secrets: [payment] iban=... (voliteľne aj bic=...)")
-else:
-    if df.empty:
-        st.info("Zatiaľ bez prihlášok.")
-    else:
-        # vyber účastníka
-        pick = st.selectbox(
-            "Vyber účastníka",
-            options=df["id"].tolist(),
-            format_func=lambda rid: f"ID {rid} – {df.loc[df['id']==rid, 'name'].values[0]}",
-            key="qr_pick_id",
-        )
-        row = df[df["id"] == pick].iloc[0]
-        amount = float(row.get("price_total") or 0.0)
-
-        # poznámka pre príjemcu (môžeš doplniť VS/ID/rok)
-        rem = f"Saxophobia {EVENT_START.year} | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
-
-        st.write(f"Suma: **{amount:.2f} €**")
-        payload = _epc_sct_payload(
-            name=PAYEE_NAME,
-            iban=PAYEE_IBAN,
-            bic=PAYEE_BIC,
-            amount_eur=amount,
-            remittance=rem,
-        )
-        qr_png = make_qr_png_bytes(payload)
-        st.image(qr_png, caption="Naskenuj v bankovej appke (SEPA platba)", width=260)
-
-        st.download_button(
-            "Stiahnuť QR (PNG)",
-            data=qr_png,
-            file_name=f"qr_platba_ID{int(row['id'])}.png",
-            mime="image/png",
-        )
     
+    # ---------- QR PLATBA (SEPA) ----------
+    st.subheader("💳 QR platba (SEPA)")
+
+    if not PAYEE_IBAN:
+        st.warning("Doplň IBAN do secrets: [payment] iban=... (voliteľne aj bic=...)")
+    else:
+        if df.empty:
+            st.info("Zatiaľ bez prihlášok.")
+        else:
+            pick = st.selectbox(
+                "Vyber účastníka",
+                options=df["id"].tolist(),
+                format_func=lambda rid: f"ID {rid} – {df.loc[df['id']==rid, 'name'].values[0]}",
+                key="qr_pick_id",
+            )
+            row = df[df["id"] == pick].iloc[0]
+            amount = float(row.get("price_total") or 0.0)
+
+            rem = f"Saxophobia {EVENT_START.year} | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
+
+            st.write(f"Suma: **{amount:.2f} €**")
+            payload = _epc_sct_payload(
+                name=PAYEE_NAME,
+                iban=PAYEE_IBAN,
+                bic=PAYEE_BIC,
+                amount_eur=amount,
+                remittance=rem,
+            )
+            qr_png = make_qr_png_bytes(payload)
+            st.image(qr_png, caption="Naskenuj v bankovej appke (SEPA platba)", width=260)
+
+            st.download_button(
+                "Stiahnuť QR (PNG)",
+                data=qr_png,
+                file_name=f"qr_platba_ID{int(row['id'])}.png",
+                mime="image/png",
+            )
+     
     # --- Hromadné vymazanie registrácií (nový ročník) ---
     with st.expander("Hromadné vymazanie registrácií – OPATRNE"):
         st.warning(
