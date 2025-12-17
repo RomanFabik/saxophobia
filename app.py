@@ -771,6 +771,53 @@ def get_public_dashboard_stats(conn) -> dict:
         "remaining": remaining,
         "top_instruments": top,
     }
+import qrcode
+from io import BytesIO
+
+def _epc_sct_payload(
+    *,
+    name: str,
+    iban: str,
+    amount_eur: float,
+    bic: str = "",
+    remittance: str = "",
+) -> str:
+    """
+    EPC / SEPA Credit Transfer QR payload (EPC069-12).
+    amount_eur: napr. 211.50
+    remittance: poznámka pre príjemcu (max ~140 znakov je rozumné)
+    """
+    amt = f"{float(amount_eur):.2f}"
+    rem = (remittance or "").strip().replace("\n", " ")[:140]
+
+    # Pozor: poradie riadkov je dôležité
+    return "\n".join([
+        "BCD",
+        "002",
+        "1",
+        "SCT",
+        (bic or "").strip(),
+        (name or "").strip(),
+        (iban or "").replace(" ", "").strip(),
+        f"EUR{amt}",
+        "",   # purpose (voliteľné)
+        "",   # remittance structured (voliteľné)
+        rem,  # remittance unstructured
+    ])
+
+def make_qr_png_bytes(payload: str) -> bytes:
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=3,
+    )
+    qr.add_data(payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    bio = BytesIO()
+    img.save(bio, format="PNG")
+    return bio.getvalue()
 
 
 # -----------------------------
@@ -1124,6 +1171,49 @@ def capacity_overview(reg_df: pd.DataFrame):
         st.progress(ratio)
         if over:
             st.warning(f"Izba {code} je preplnená o {used - cap} miest.")
+
+st.subheader("💳 QR platba (SEPA)")
+
+PAYEE_NAME = "Saxophobia"  # názov príjemcu (organizátor)
+PAYEE_IBAN = get_secret("payment.iban", "")
+PAYEE_BIC  = get_secret("payment.bic", "")
+
+if not PAYEE_IBAN:
+    st.warning("Doplň IBAN do secrets: [payment] iban=... (voliteľne aj bic=...)")
+else:
+    if df.empty:
+        st.info("Zatiaľ bez prihlášok.")
+    else:
+        # vyber účastníka
+        pick = st.selectbox(
+            "Vyber účastníka",
+            options=df["id"].tolist(),
+            format_func=lambda rid: f"ID {rid} – {df.loc[df['id']==rid, 'name'].values[0]}",
+            key="qr_pick_id",
+        )
+        row = df[df["id"] == pick].iloc[0]
+        amount = float(row.get("price_total") or 0.0)
+
+        # poznámka pre príjemcu (môžeš doplniť VS/ID/rok)
+        rem = f"Saxophobia {EVENT_START.year} | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
+
+        st.write(f"Suma: **{amount:.2f} €**")
+        payload = _epc_sct_payload(
+            name=PAYEE_NAME,
+            iban=PAYEE_IBAN,
+            bic=PAYEE_BIC,
+            amount_eur=amount,
+            remittance=rem,
+        )
+        qr_png = make_qr_png_bytes(payload)
+        st.image(qr_png, caption="Naskenuj v bankovej appke (SEPA platba)", width=260)
+
+        st.download_button(
+            "Stiahnuť QR (PNG)",
+            data=qr_png,
+            file_name=f"qr_platba_ID{int(row['id'])}.png",
+            mime="image/png",
+        )
 
 
 def save_repertoire(conn: sqlite3.Connection, df_rep: pd.DataFrame):
