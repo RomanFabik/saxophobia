@@ -1261,10 +1261,21 @@ def _clean_emails(emails: List[str]) -> List[str]:
             uniq.append(e); seen.add(e)
     return uniq
 
-def send_email_smtp(subject: str, body: str, to_addrs: List[str], bcc_addrs: Optional[List[str]] = None) -> Tuple[bool, str]:
+from email.utils import make_msgid
+
+def send_email_smtp(
+    subject: str,
+    body: str,
+    to_addrs: List[str],
+    bcc_addrs: Optional[List[str]] = None,
+    *,
+    inline_qr_png: Optional[bytes] = None,
+    inline_qr_caption: str = "QR platba (SEPA)",
+) -> Tuple[bool, str]:
     """
     Odošle e-mail cez Gmail SMTP (STARTTLS).
-    Posiela multipart/alternative: text + HTML (pevný font, správne odseky).
+    - multipart/alternative: text + HTML
+    - ak inline_qr_png je zadané, vloží QR do HTML cez CID a zároveň priloží PNG.
     """
     user, app_password, sender_name = _get_gmail_creds()
     if not user or not app_password:
@@ -1273,14 +1284,49 @@ def send_email_smtp(subject: str, body: str, to_addrs: List[str], bcc_addrs: Opt
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = f"{sender_name} <{user}>"
-    msg["To"] = ", ".join(to_addrs) if to_addrs else user  # fallback
+    msg["To"] = ", ".join(to_addrs) if to_addrs else user
     if bcc_addrs:
         msg["Bcc"] = ", ".join(bcc_addrs)
 
-    # plain-text + HTML varianta
+    # plain-text
     msg.set_content(body or "")
+
+    # HTML (s voliteľným QR)
+    cid = None
     html_body = _wrap_html_from_text(body or "")
+
+    if inline_qr_png:
+        cid = make_msgid(domain="saxophobia.local")  # napr. <...@saxophobia.local>
+        cid_clean = cid[1:-1]  # bez < >
+
+        # doplníme QR do HTML
+        html_body = html_body.replace(
+            "</body>",
+            f"""
+            <hr>
+            <div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5;">
+              <p><b>{html.escape(inline_qr_caption)}</b></p>
+              <img src="cid:{cid_clean}" alt="QR" style="max-width:260px; height:auto;">
+              <p style="color:#444; font-size:12px;">Ak sa QR nezobrazí inline, nájdeš ho aj v prílohe.</p>
+            </div>
+            </body>
+            """
+        )
+
     msg.add_alternative(html_body, subtype="html")
+
+    # pridať QR ako inline related + príloha
+    if inline_qr_png and cid:
+        html_part = msg.get_payload()[-1]  # HTML časť
+        html_part.add_related(inline_qr_png, maintype="image", subtype="png", cid=cid)
+
+        # fallback príloha (niektoré klienty inline schovajú)
+        msg.add_attachment(
+            inline_qr_png,
+            maintype="image",
+            subtype="png",
+            filename="qr_platba.png",
+        )
 
     try:
         context = ssl.create_default_context()
@@ -1291,6 +1337,7 @@ def send_email_smtp(subject: str, body: str, to_addrs: List[str], bcc_addrs: Opt
         return True, "E-mail odoslaný."
     except Exception as e:
         return False, f"Chyba pri odosielaní: {e}"
+
 
 
 
@@ -1645,6 +1692,57 @@ def page_organizer():
                         st.link_button(f"Otvoriť v predvolenom klientovi pre {rcpt}", mailto_link)
             else:
                 st.caption("Vyber aspoň jedného príjemcu v tabuľke vyššie.")
+
+    st.markdown("### ✅ Odoslať priamo z appky (SMTP) s QR platbou")
+
+if st.button("Odoslať vybraným (s QR)", disabled=not bool(chosen_clean), key="send_individual_with_qr"):
+    ok_count = 0
+    fail = []
+
+    for rcpt in chosen_clean:
+        # nájdi riadok účastníka podľa emailu
+        rr = df[df["email"].fillna("").astype(str).str.strip() == rcpt].head(1)
+        if rr.empty:
+            fail.append((rcpt, "Nenájdený záznam v DB"))
+            continue
+
+        row = rr.iloc[0]
+        amount = float(row.get("price_total") or 0.0)
+
+        rem = f"Sax26 | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
+
+        payload = _epc_sct_payload(
+            name=PAYEE_NAME,   # napr. "Ladislav Fančovič"
+            iban=PAYEE_IBAN,
+            bic=PAYEE_BIC,
+            amount_eur=amount,
+            remittance=rem,
+        )
+        qr_png = make_qr_png_bytes(payload)
+
+        # text mailu (môžeš doplniť sumu + IBAN)
+        body_final = (body_ind or "")
+        body_final += f"\n\nSuma na úhradu: {amount:.2f} €\nPoznámka: {rem}"
+
+        ok, msg = send_email_smtp(
+            subject=subj_ind or "Saxophobia – platba",
+            body=body_final,
+            to_addrs=[rcpt],
+            inline_qr_png=qr_png,
+            inline_qr_caption=f"QR platba (SEPA) – {amount:.2f} €",
+        )
+
+        if ok:
+            ok_count += 1
+        else:
+            fail.append((rcpt, msg))
+
+    if ok_count:
+        st.success(f"Odoslané: {ok_count} e-mailov.")
+    if fail:
+        st.error("Niektoré e-maily sa nepodarilo odoslať:")
+        for rcpt, err in fail:
+            st.write(f"- {rcpt}: {err}")
 
 
 
