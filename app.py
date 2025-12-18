@@ -17,6 +17,7 @@ def hide_streamlit_menu():
 
 from urllib.parse import quote
 import html
+import requests
 import smtplib, ssl
 from email.message import EmailMessage
 import streamlit as st
@@ -823,6 +824,22 @@ def make_qr_png_bytes(payload: str) -> bytes:
     bio = BytesIO()
     img.save(bio, format="PNG")
     return bio.getvalue()
+def make_paybysquare_png_bytes(*, amount: float, iban: str, bic: str, recipient: str, note: str, vs: str = "") -> bytes:
+    # Pozn.: note má mať max ~35 znakov (podľa služby)
+    base = "https://qr.slada.sk/qr.php"  # alebo tvoja vlastná hostovaná verzia
+    params = {
+        "price": f"{float(amount):.2f}",
+        "note": (note or "")[:35],
+        "recipient": (recipient or "")[:70],  # služba má “?” v README, ale toto je bezpečné
+        "iban": (iban or "").replace(" ", ""),
+        "swift": (bic or "").replace(" ", ""),
+        "vs": (vs or ""),
+        "pixelsize": "4",
+        "pixelpadding": "2",
+    }
+    r = requests.get(base, params=params, timeout=15)
+    r.raise_for_status()
+    return r.content
 
 
 # -----------------------------
