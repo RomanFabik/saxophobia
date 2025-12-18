@@ -1695,54 +1695,54 @@ def page_organizer():
 
     st.markdown("### ✅ Odoslať priamo z appky (SMTP) s QR platbou")
 
-if st.button("Odoslať vybraným (s QR)", disabled=not bool(chosen_clean), key="send_individual_with_qr"):
-    ok_count = 0
-    fail = []
+    if st.button("Odoslať vybraným (s QR)", disabled=not bool(chosen_clean), key="send_individual_with_qr"):
+        ok_count = 0
+        fail = []
 
-    for rcpt in chosen_clean:
-        # nájdi riadok účastníka podľa emailu
-        rr = df[df["email"].fillna("").astype(str).str.strip() == rcpt].head(1)
-        if rr.empty:
-            fail.append((rcpt, "Nenájdený záznam v DB"))
-            continue
+        for rcpt in chosen_clean:
+            # nájdi riadok účastníka podľa emailu
+            rr = df[df["email"].fillna("").astype(str).str.strip() == rcpt].head(1)
+            if rr.empty:
+                fail.append((rcpt, "Nenájdený záznam v DB"))
+                continue
 
-        row = rr.iloc[0]
-        amount = float(row.get("price_total") or 0.0)
+            row = rr.iloc[0]
+            amount = float(row.get("price_total") or 0.0)
 
-        rem = f"Sax26 | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
+            rem = f"Sax26 | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
 
-        payload = _epc_sct_payload(
-            name=PAYEE_NAME,   # napr. "Ladislav Fančovič"
-            iban=PAYEE_IBAN,
-            bic=PAYEE_BIC,
-            amount_eur=amount,
-            remittance=rem,
-        )
-        qr_png = make_qr_png_bytes(payload)
+            payload = _epc_sct_payload(
+                name=PAYEE_NAME,   # napr. "Ladislav Fančovič"
+                iban=PAYEE_IBAN,
+                bic=PAYEE_BIC,
+                amount_eur=amount,
+                remittance=rem,
+            )
+            qr_png = make_qr_png_bytes(payload)
 
-        # text mailu (môžeš doplniť sumu + IBAN)
-        body_final = (body_ind or "")
-        body_final += f"\n\nSuma na úhradu: {amount:.2f} €\nPoznámka: {rem}"
+            # text mailu (môžeš doplniť sumu + IBAN)
+            body_final = (body_ind or "")
+            body_final += f"\n\nSuma na úhradu: {amount:.2f} €\nPoznámka: {rem}"
 
-        ok, msg = send_email_smtp(
-            subject=subj_ind or "Saxophobia – platba",
-            body=body_final,
-            to_addrs=[rcpt],
-            inline_qr_png=qr_png,
-            inline_qr_caption=f"QR platba (SEPA) – {amount:.2f} €",
-        )
+            ok, msg = send_email_smtp(
+                subject=subj_ind or "Saxophobia – platba",
+                body=body_final,
+                to_addrs=[rcpt],
+                inline_qr_png=qr_png,
+                inline_qr_caption=f"QR platba (SEPA) – {amount:.2f} €",
+            )
 
-        if ok:
-            ok_count += 1
-        else:
-            fail.append((rcpt, msg))
+            if ok:
+                ok_count += 1
+            else:
+                fail.append((rcpt, msg))
 
-    if ok_count:
-        st.success(f"Odoslané: {ok_count} e-mailov.")
-    if fail:
-        st.error("Niektoré e-maily sa nepodarilo odoslať:")
-        for rcpt, err in fail:
-            st.write(f"- {rcpt}: {err}")
+        if ok_count:
+            st.success(f"Odoslané: {ok_count} e-mailov.")
+        if fail:
+            st.error("Niektoré e-maily sa nepodarilo odoslať:")
+            for rcpt, err in fail:
+                st.write(f"- {rcpt}: {err}")
 
 
 
