@@ -675,7 +675,7 @@ def get_secret(path: str, default: Optional[str] = None) -> Optional[str]:
 # =========================
 # PLATOBNÉ ÚDAJE (QR SEPA)
 # =========================
-PAYEE_NAME = "Saxophobia"
+PAYEE_NAME = "Ladislav Fancovic"
 PAYEE_IBAN = get_secret("payment.iban", "")
 PAYEE_BIC  = get_secret("payment.bic", "")
 
@@ -1400,7 +1400,7 @@ def page_organizer():
             row = df[df["id"] == pick].iloc[0]
             amount = float(row.get("price_total") or 0.0)
 
-            note = f"Saxophobia {EVENT_START.year} | ID {int(row['id'])} | {row.get('name','')}".strip()
+            note = f"Sax26 | ID {int(row['id'])} | {row.get('name','')}".strip()
 
             st.write(f"Suma: **{amount:.2f} €**")
 
@@ -1408,7 +1408,7 @@ def page_organizer():
                 amount=amount,
                 iban=PAYEE_IBAN,
                 bic=PAYEE_BIC,
-                recipient=PAYEE_NAME,
+                recipient="Ladislav Fancovic",
                 note=note,
                 vs=str(int(row["id"])),
             )
