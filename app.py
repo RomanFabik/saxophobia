@@ -348,7 +348,7 @@ def page_feedback():
         q_df = load_feedback_questions(conn, year)
         edited = st.data_editor(
             q_df,
-            use_container_width=True,
+            use_container_width="stretch",
             num_rows="dynamic",
             hide_index=True,
             column_config={
@@ -404,7 +404,7 @@ def page_feedback():
                 axis=1,
             )
 
-            st.dataframe(export_df, use_container_width=True)
+            st.dataframe(export_df, use_container_width="stretch")
             xlsx = to_excel_bytes(export_df)
 
             filename = f"feedback_{year}.xlsx"
@@ -1352,7 +1352,7 @@ def page_organizer():
 
         edited = st.data_editor(
             df_top,
-            use_container_width=True,
+            use_container_width="stretch",
             num_rows="dynamic",
             disabled=[c for c in df_top.columns if c not in editable_cols],
             column_config=column_config,
@@ -1574,7 +1574,7 @@ def page_organizer():
             df_mail["send"] = False
             df_mail = st.data_editor(
                 df_mail,
-                use_container_width=True,
+                use_container_width="stretch",
                 hide_index=True,
                 column_config={
                     "name": st.column_config.TextColumn("Meno", disabled=True),
@@ -1650,7 +1650,7 @@ def page_organizer():
 
         edited_rep = st.data_editor(
             rep_df,
-            use_container_width=True,
+            use_container_width="stretch",
             hide_index=True,
             num_rows="dynamic",
             column_config=cfg,
@@ -1776,7 +1776,7 @@ def page_admin():
     edited_lec_df = st.data_editor(
         orig_lec_df,
         hide_index=True,
-        use_container_width=True,
+        use_container_width="stretch",
         num_rows="dynamic",
         column_config={
             "id": st.column_config.NumberColumn("ID", disabled=True),
@@ -1915,7 +1915,7 @@ def page_admin():
 
     # Manuálna práca so slotmi
     slots_df = pd.read_sql_query("SELECT * FROM slots ORDER BY day, start, teacher", conn)
-    st.dataframe(slots_df, use_container_width=True)
+    st.dataframe(slots_df, use_container_width="stretch")
 
     with st.expander("Pridať špeciálny program / blokovanie"):
         sp_day   = st.date_input("Deň", value=EVENT_START, key="block_day")
@@ -1967,7 +1967,7 @@ def page_admin():
     # Zobrazenie matice podobnej hárku "Lekcie"
     st.subheader("Matica lekcií (náhľad)")
     matrix_df = build_matrix_like_excel(conn)
-    st.dataframe(matrix_df, use_container_width=True)
+    st.dataframe(matrix_df, use_container_width="stretch")
 
     if not matrix_df.empty:
         xlsx = to_excel_bytes(matrix_df)
