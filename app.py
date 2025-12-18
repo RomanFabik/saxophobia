@@ -27,6 +27,8 @@ import json
 from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Optional, Tuple
 
+import pathlib
+
 # -----------------------------
 # Jazykové texty
 # -----------------------------
@@ -144,6 +146,18 @@ INSTRUMENTS = ["sopran sax", "alt sax", "tenor sax", "baryton sax", "bas sax", "
 
 DB_PATH = "saxophobia.db"
 
+def download_db_backup():
+    db_path = pathlib.Path(DB_PATH)
+    if db_path.exists():
+        with open(db_path, "rb") as f:
+            st.download_button(
+                "⬇️ Stiahnuť BACKUP databázy",
+                data=f,
+                file_name="saxophobia_backup.db",
+                mime="application/octet-stream",
+            )
+    else:
+        st.error("Databáza neexistuje.")
 # -----------------------------
 # UBYTOVACÍ INVENTÁR (kódy a kapacity)
 # -----------------------------
@@ -1320,6 +1334,29 @@ def page_organizer():
             )
             persist_prices(conn, df_priced)
             df = pd.read_sql_query("SELECT * FROM registrations ORDER BY created_at DESC", conn)
+    
+    st.subheader("🛡️ Záloha databázy")
+    download_db_backup()
+
+    uploaded = st.file_uploader(
+        "⬆️ Obnoviť databázu zo súboru (.db)",
+        type=["db"],
+        key="db_restore_uploader",
+    )
+
+    if uploaded is not None:
+        # zavri staré spojenie (cache)
+        try:
+            get_conn.clear()
+        except Exception:
+            pass
+
+        with open(DB_PATH, "wb") as f:
+            f.write(uploaded.read())
+
+        st.success("Databáza bola obnovená. Reštartujem aplikáciu…")
+        st.rerun()
+
 
 
     # Parsovanie preferovaných lektorov pre zobrazenie
