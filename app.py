@@ -1315,51 +1315,6 @@ def send_email_smtp(
 
     msg.add_alternative(html_body, subtype="html")
 
-    from email.utils import make_msgid
-
-    def send_email_smtp_with_inline_qr(subject: str, body: str, to_addrs: list[str], qr_png: bytes) -> tuple[bool, str]:
-        user, app_password, sender_name = _get_gmail_creds()
-        if not user or not app_password:
-            return False, "Chýbajú Gmail údaje v secrets."
-
-        msg = EmailMessage()
-        msg["Subject"] = subject
-        msg["From"] = f"{sender_name} <{user}>"
-        msg["To"] = ", ".join(to_addrs)
-
-        cid = make_msgid(domain="saxophobia.local")  # napr. <...@...>
-        cid_nobrackets = cid[1:-1]
-
-        # text fallback
-        msg.set_content((body or "") + "\n\nQR kód je v HTML verzii e-mailu.")
-
-        # HTML s inline QR
-        html_body = _wrap_html_from_text(body or "")
-        html_body = html_body.replace(
-            "</body>",
-            f"""
-            <hr>
-            <p><b>QR platba:</b></p>
-            <p><img src="cid:{cid_nobrackets}" alt="QR platba" style="max-width:260px;height:auto;"></p>
-            </body>
-            """
-        )
-    msg.add_alternative(html_body, subtype="html")
-
-        # pripoj obrázok ako related k HTML časti
-        msg.get_payload()[-1].add_related(qr_png, maintype="image", subtype="png", cid=cid)
-
-        try:
-            context = ssl.create_default_context()
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls(context=context)
-                server.login(user, app_password)
-                server.send_message(msg)
-            return True, "E-mail odoslaný (s inline QR)."
-        except Exception as e:
-            return False, f"Chyba pri odosielaní: {e}"
-
-    
     # pridať QR ako inline related + príloha
     if inline_qr_png and cid:
         html_part = msg.get_payload()[-1]  # HTML časť
