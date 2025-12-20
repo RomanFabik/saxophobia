@@ -1715,14 +1715,15 @@ def page_organizer():
 
             rem = f"Sax26 | ID {int(row['id'])} | {row.get('name','')}".strip()[:140]
 
-            payload = _epc_sct_payload(
-                name=PAYEE_NAME,   # napr. "Ladislav Fančovič"
+            qr_png = make_paybysquare_png_bytes(
+                amount=amount,
                 iban=PAYEE_IBAN,
                 bic=PAYEE_BIC,
-                amount_eur=amount,
-                remittance=rem,
+                PAYEE_NAME = "Ladislav Fančovič",         
+                rem = f"Sax26 | {int(row['id'])} | {row.get('name','')}".strip()[:35],                      
+                vs="",                         
             )
-            qr_png = make_qr_png_bytes(payload)
+
 
             # text mailu (môžeš doplniť sumu + IBAN)
             body_final = (body_ind or "")
