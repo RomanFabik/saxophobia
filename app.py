@@ -1695,13 +1695,22 @@ def page_organizer():
 
     st.markdown("### ✅ Odoslať priamo z appky (SMTP) s QR platbou")
 
+    # 🔍 DEBUG – dočasne
+    u, pw, nm = _get_gmail_creds()
+    st.caption(f"SMTP user: {u}")
+    st.caption(f"App password loaded: {bool(pw)}")
+    
     if st.button("Odoslať vybraným (s QR)", disabled=not bool(chosen_clean), key="send_individual_with_qr"):
         ok_count = 0
         fail = []
 
         for rcpt in chosen_clean:
             # nájdi riadok účastníka podľa emailu
-            rr = df[df["email"].fillna("").astype(str).str.strip() == rcpt].head(1)
+            rcpt_norm = str(rcpt).strip().lower()
+            rr = df[
+                df["email"].fillna("").astype(str).str.strip().str.lower() == rcpt_norm
+            ].head(1)
+
             if rr.empty:
                 fail.append((rcpt, "Nenájdený záznam v DB"))
                 continue
