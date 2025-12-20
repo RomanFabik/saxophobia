@@ -1719,9 +1719,9 @@ def page_organizer():
                 amount=amount,
                 iban=PAYEE_IBAN,
                 bic=PAYEE_BIC,
-                PAYEE_NAME = "Ladislav Fančovič",         
-                rem = f"Sax26 | {int(row['id'])} | {row.get('name','')}".strip()[:35],                      
-                vs="",                         
+                recipient=PAYEE_NAME,          # napr. "Ladislav Fančovič"
+                note=rem,                      # napr. "Sax26 | ID 1 | Daniel Fábik"
+                vs="",                          # ak chceš variabilný symbol, daj sem
             )
 
 
