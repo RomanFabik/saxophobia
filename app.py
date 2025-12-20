@@ -1694,11 +1694,6 @@ def page_organizer():
                 st.caption("Vyber aspoň jedného príjemcu v tabuľke vyššie.")
 
     st.markdown("### ✅ Odoslať priamo z appky (SMTP) s QR platbou")
-
-    # 🔍 DEBUG – dočasne
-    u, pw, nm = _get_gmail_creds()
-    st.caption(f"SMTP user: {u}")
-    st.caption(f"App password loaded: {bool(pw)}")
     
     if st.button("Odoslať vybraným (s QR)", disabled=not bool(chosen_clean), key="send_individual_with_qr"):
         ok_count = 0
