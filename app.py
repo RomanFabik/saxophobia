@@ -137,6 +137,11 @@ DEFAULT_LECTORS = [
     "Brutti",
     "Portejoie",
 ]
+PAYMENT_STATUSES = [
+    "nezaplatené",
+    "zaplatené",
+    "storno",
+]
 
 
 ENSEMBLE_TYPES = ["jednotlivec/individual", "duo", "trio", "kvarteto", "kvinteto", "iné/other"]
@@ -352,6 +357,20 @@ def page_feedback():
             save_feedback_response(conn, payload)
             st.success(txt["feedback_success"])
 
+def ensure_payment_status_column(conn: sqlite3.Connection):
+    cur = conn.cursor()
+    cur.execute("PRAGMA table_info(registrations)")
+    cols = {row[1] for row in cur.fetchall()}
+    if "payment_status" not in cols:
+        try:
+            cur.execute(
+                "ALTER TABLE registrations ADD COLUMN payment_status TEXT DEFAULT 'nezaplatené'"
+            )
+            conn.commit()
+        except Exception:
+            pass
+
+    
     # ---------- ADMIN – OTÁZKY & EXPORT ----------
     with tab_admin:
         if not login("admin"):
@@ -587,6 +606,8 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
     ensure_email_templates_table(conn)
+    ensure_payment_status_column(conn)
+
 
     # Registrácie účastníkov
     cur.execute(
@@ -1130,7 +1151,8 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
         "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
         "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
-        "room_code",
+        "room_code","payment_status",
+,
     ]
 
     # Zistíme, ktoré stĺpce naozaj existujú v DB
@@ -1422,7 +1444,7 @@ def page_organizer():
             "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
             "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
             "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
-            "room_code",
+            "room_code", "payment_status",,
         ]
 
         column_config = {
@@ -1431,6 +1453,12 @@ def page_organizer():
                 help="Vyber kód podľa inventára (napr. JK10-1, JK4-2, DK8-1).",
                 options=ROOM_CODES,
                 required=False,
+            ),
+
+            "payment_status": st.column_config.SelectboxColumn(
+                "Stav platby",
+                options=PAYMENT_STATUSES,
+                required=True,
             ),
         }
 
