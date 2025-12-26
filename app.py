@@ -1152,7 +1152,7 @@ def save_edited_registrations(conn: sqlite3.Connection, df: pd.DataFrame):
         "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
         "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
         "room_code","payment_status",
-,
+    ,
     ]
 
     # Zistíme, ktoré stĺpce naozaj existujú v DB
