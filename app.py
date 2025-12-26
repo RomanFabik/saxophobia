@@ -1444,7 +1444,7 @@ def page_organizer():
             "phone","age","course","instrument","people_count","ensemble_type","member_names","lesson_count",
             "wants_accommodation","arrival_date","departure_date","room_type","breakfasts","lunches","notes",
             "price_accommodation","price_breakfasts","price_citytax","price_course","price_total", "price_lunches",
-            "room_code", "payment_status",,
+            "room_code", "payment_status",
         ]
 
         column_config = {
@@ -1747,7 +1747,7 @@ def page_organizer():
                 amount=amount,
                 iban=PAYEE_IBAN,
                 bic=PAYEE_BIC,
-                recipient=PAYEE_NAME,          # napr. "Ladislav Fančovič"
+                recipient=PAYEE_NAME,          # napr. "Ladislav Fancovic"
                 note=rem,                      # napr. "Sax26 | ID 1 | Daniel Fábik"
                 vs="",                          # ak chceš variabilný symbol, daj sem
             )
